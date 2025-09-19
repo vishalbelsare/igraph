@@ -1,5 +1,5 @@
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2006-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard st, Cambridge, MA, 02138 USA
 
@@ -23,7 +23,7 @@
 %{
 
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2006-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard st, Cambridge, MA, 02138 USA
 
@@ -44,24 +44,22 @@
 
 */
 
-#include <stdio.h>
-#include <string.h>
-
 #include "igraph_types.h"
 #include "igraph_memory.h"
 #include "igraph_error.h"
-#include "config.h"
 
-#include "core/math.h"
 #include "io/ncol-header.h"
 #include "io/parsers/ncol-parser.h"
 #include "io/parsers/ncol-lexer.h"
+#include "io/parse_utils.h"
 #include "internal/hacks.h"
+
+#include <stdio.h>
+#include <string.h>
 
 int igraph_ncol_yyerror(YYLTYPE* locp,
                         igraph_i_ncol_parsedata_t *context,
                         const char *s);
-igraph_real_t igraph_ncol_get_number(const char *str, long int len);
 
 #define scanner context->scanner
 %}
@@ -77,15 +75,16 @@ igraph_real_t igraph_ncol_get_number(const char *str, long int len);
 %lex-param { void *scanner }
 
 %union {
-  long int edgenum;
-  double weightnum;
+  igraph_int_t edgenum;
+  igraph_real_t weightnum;
 }
 
 %type <edgenum>   edgeid
 %type <weightnum> weight
 
-%token ALNUM
-%token NEWLINE
+%token ALNUM    "alphanumeric"
+%token NEWLINE  "end of line"
+%token END 0    "end of file" /* friendly name for $end */
 %token ERROR
 
 %%
@@ -95,26 +94,37 @@ input :    /* empty */
          | input edge
 ;
 
-edge :   edgeid edgeid NEWLINE        {
-           igraph_vector_push_back(context->vector, $1);
-           igraph_vector_push_back(context->vector, $2);
-           igraph_vector_push_back(context->weights, 0);
+edge :   endpoints NEWLINE {
+           IGRAPH_YY_CHECK(igraph_vector_push_back(context->weights, 1.0));
        }
-       | edgeid edgeid weight NEWLINE {
-           igraph_vector_push_back(context->vector, $1);
-           igraph_vector_push_back(context->vector, $2);
-           igraph_vector_push_back(context->weights, $3);
-           context->has_weights = 1;
+       | endpoints weight NEWLINE {
+           IGRAPH_YY_CHECK(igraph_vector_push_back(context->weights, $2));
+           context->has_weights = true;
        }
 ;
 
-edgeid : ALNUM  { igraph_trie_get2(context->trie,
-                  igraph_ncol_yyget_text(scanner),
-                  igraph_ncol_yyget_leng(scanner),
-                  &$$); };
+endpoints : edgeid edgeid  {
+  IGRAPH_YY_CHECK(igraph_vector_int_push_back(context->vector, $1));
+  IGRAPH_YY_CHECK(igraph_vector_int_push_back(context->vector, $2));
+};
 
-weight : ALNUM  { $$=igraph_ncol_get_number(igraph_ncol_yyget_text(scanner),
-                        igraph_ncol_yyget_leng(scanner)); } ;
+edgeid : ALNUM  {
+  igraph_int_t trie_id;
+  IGRAPH_YY_CHECK(igraph_trie_get_len(context->trie,
+    igraph_ncol_yyget_text(scanner),
+    igraph_ncol_yyget_leng(scanner),
+    &trie_id
+  ));
+  $$ = trie_id;
+};
+
+weight : ALNUM  {
+    igraph_real_t val;
+    IGRAPH_YY_CHECK(igraph_i_parse_real(igraph_ncol_yyget_text(scanner),
+                                        igraph_ncol_yyget_leng(scanner),
+                                        &val));
+    $$=val;
+};
 
 %%
 
@@ -125,15 +135,4 @@ int igraph_ncol_yyerror(YYLTYPE* locp,
             "Parse error in NCOL file, line %i (%s)",
             locp->first_line, s);
     return 0;
-}
-
-igraph_real_t igraph_ncol_get_number(const char *str, long int length) {
-    igraph_real_t num;
-    char *tmp=IGRAPH_CALLOC(length+1, char);
-
-    strncpy(tmp, str, length);
-    tmp[length]='\0';
-    sscanf(tmp, "%lf", &num);
-    IGRAPH_FREE(tmp);
-    return num;
 }

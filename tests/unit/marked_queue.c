@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2010-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard st, Cambridge MA, 02139 USA
 
@@ -24,41 +23,41 @@
 #include <igraph.h>
 #include "core/marked_queue.h"
 
-#include "test_utilities.inc"
+#include "test_utilities.h"
 
-int main() {
-    igraph_marked_queue_t Q;
-    long int i;
+int main(void) {
+    igraph_marked_queue_int_t Q;
+    igraph_int_t i;
 
-    igraph_marked_queue_init(&Q, 100);
+    igraph_marked_queue_int_init(&Q, 100);
     for (i = 0; i < 50; i++) {
-        igraph_marked_queue_push(&Q, i);
-        if (!igraph_marked_queue_iselement(&Q, i)) {
+        igraph_marked_queue_int_push(&Q, i);
+        if (!igraph_marked_queue_int_iselement(&Q, i)) {
             return 4;
         }
         if (! ((i + 1) % 5)) {
-            igraph_marked_queue_start_batch(&Q);
+            igraph_marked_queue_int_start_batch(&Q);
         }
     }
 
     for (i = 1; i < 50; i++) {
-        if (!igraph_marked_queue_iselement(&Q, i)) {
-            printf("Problem with %li.\n", i);
+        if (!igraph_marked_queue_int_iselement(&Q, i)) {
+            printf("Problem with %" IGRAPH_PRId ".\n", i);
             return 3;
         }
     }
 
     for (i = 0; i <= 50 / 5; i++) {
-        if (igraph_marked_queue_empty(&Q)) {
+        if (igraph_marked_queue_int_empty(&Q)) {
             return 1;
         }
-        igraph_marked_queue_pop_back_batch(&Q);
+        igraph_marked_queue_int_pop_back_batch(&Q);
     }
-    if (!igraph_marked_queue_empty(&Q)) {
+    if (!igraph_marked_queue_int_empty(&Q)) {
         return 2;
     }
 
-    igraph_marked_queue_destroy(&Q);
+    igraph_marked_queue_int_destroy(&Q);
 
     VERIFY_FINALLY_STACK();
 

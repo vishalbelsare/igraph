@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2011-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard street, Cambridge MA, 02139 USA
 
@@ -23,7 +22,7 @@
 
 #include <igraph.h>
 
-#include "test_utilities.inc"
+#include "test_utilities.h"
 
 #define DIM1 10
 #define DIM2 5
@@ -32,7 +31,7 @@
 #define INT(a) (igraph_rng_get_integer(igraph_rng_default(), 0, (a)))
 #define REAL() (igraph_rng_get_normal(igraph_rng_default(), 0, 1))
 
-int main() {
+int main(void) {
     igraph_sparsemat_t sA, sB, sC;
     igraph_matrix_t A1, A2, A3, B, C;
     int i;

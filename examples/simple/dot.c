@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2007-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard street, Cambridge, MA 02139 USA
 
@@ -24,10 +23,12 @@
 #include <igraph.h>
 #include <stdio.h>
 
-int main() {
-
+int main(void) {
     igraph_t g;
     FILE *ifile;
+
+    /* Initialize the library. */
+    igraph_setup();
 
     ifile = fopen("karate.gml", "r");
     if (ifile == 0) {

@@ -38,6 +38,7 @@
  */
 
 #include "igraph_qsort.h"
+#include "igraph_error.h"
 
 #ifdef _MSC_VER
     /* MSVC does not have inline when compiling C source files */
@@ -45,13 +46,14 @@
     #define __unused
 #endif
 
+#if defined(_MSC_VER) && _MSC_VER < 1927
+    /* MSVC does not understand restrict before version 19.27 */
+    #define restrict __restrict
+#endif
+
 #ifndef __unused
   #define __unused    __attribute__ ((unused))
 #endif
-
-#if defined(LIBC_SCCS) && !defined(lint)
-static char sccsid[] = "@(#)qsort.c	8.1 (Berkeley) 6/4/93";
-#endif /* LIBC_SCCS and not lint */
 
 #include <stdlib.h>
 
@@ -71,7 +73,7 @@ static inline char	*med3(char *, char *, char *, cmp_t *, void *);
  */
 
 static inline void
-swapfunc(char *a, char *b, size_t es)
+swapfunc(char * restrict a, char * restrict b, size_t es)
 {
 	char t;
 
@@ -122,6 +124,9 @@ local_qsort(void *a, size_t n, size_t es, cmp_t *cmp, void *thunk)
 	int cmp_result;
 	int swap_cnt;
 
+    /* if there are less than 2 elements, then sorting is not needed */
+    if (IGRAPH_UNLIKELY(n < 2))
+        return;
 loop:
 	swap_cnt = 0;
 	if (n < 7) {

@@ -44,21 +44,10 @@
 // S. Martin
 // 5/6/2005
 
-// C++ library routines
-#include <map>
-#include <vector>
-
-using namespace std;
-
 // layout routines and constants
 #include "drl_layout.h"
 #include "drl_parse.h"
 #include "drl_graph.h"
-
-// MPI
-#ifdef MUSE_MPI
-    #include <mpi.h>
-#endif
 
 using namespace drl;
 #include "igraph_layout.h"
@@ -248,7 +237,7 @@ namespace drl {
  * Time complexity: O(1).
  */
 
-int igraph_layout_drl_options_init(igraph_layout_drl_options_t *options,
+igraph_error_t igraph_layout_drl_options_init(igraph_layout_drl_options_t *options,
                                    igraph_layout_drl_default_t templ) {
 
     options->edge_cut = 32.0 / 40.0;
@@ -431,32 +420,23 @@ int igraph_layout_drl_options_init(igraph_layout_drl_options_t *options,
  * Brown, W.M., Klavans, R., Boyack, K.W., DrL: Distributed Recursive
  * (Graph) Layout. SAND Reports, 2008. 2936: p. 1-10.
  * \param graph The input graph.
- * \param use_seed Logical scalar, if true, then the coordinates
+ * \param use_seed Boolean, if true, then the coordinates
  *    supplied in the \p res argument are used as starting points.
  * \param res Pointer to a matrix, the result layout is stored
  *    here. It will be resized as needed.
  * \param options The parameters to pass to the layout generator.
  * \param weights Edge weights, pointer to a vector. If this is a null
  *    pointer then every edge will have the same weight.
- * \param fixed Pointer to a logical vector, or a null pointer. Originally,
- *    this argument was used in the DrL algorithm to keep the nodes marked
- *    with this argument as fixed; fixed nodes would then keep their
- *    positions in the initial stages of the algorithm. However, due to how
- *    the DrL code imported into igraph is organized, it seems that the
- *    argument does not do anything and we are not sure whether this is a
- *    bug or a feature in DrL. We are leaving the argument here in order not
- *    to break the API, but note that at the present stage it has no effect.
  * \return Error code.
  *
  * Time complexity: ???.
  */
 
-int igraph_layout_drl(const igraph_t *graph, igraph_matrix_t *res,
+igraph_error_t igraph_layout_drl(const igraph_t *graph, igraph_matrix_t *res,
                       igraph_bool_t use_seed,
-                      igraph_layout_drl_options_t *options,
-                      const igraph_vector_t *weights,
-                      const igraph_vector_bool_t *fixed) {
-    const char msg[] = "Damping multipliers cannot be negative, got %f.";
+                      const igraph_layout_drl_options_t *options,
+                      const igraph_vector_t *weights) {
+    const char msg[] = "Damping multipliers cannot be negative, got %g.";
 
     if (options->init_damping_mult < 0) {
         IGRAPH_ERRORF(msg, IGRAPH_EINVAL, options->init_damping_mult);
@@ -477,18 +457,24 @@ int igraph_layout_drl(const igraph_t *graph, igraph_matrix_t *res,
         IGRAPH_ERRORF(msg, IGRAPH_EINVAL, options->simmer_damping_mult);
     }
 
-    IGRAPH_HANDLE_EXCEPTIONS(
-        RNG_BEGIN();
+    if (weights) {
+        igraph_int_t no_of_edges = igraph_ecount(graph);
+        if (igraph_vector_size(weights) != no_of_edges) {
+            IGRAPH_ERROR("Length of weight vector does not match number of edges.", IGRAPH_EINVAL);
+        }
+        if (no_of_edges > 0 && igraph_vector_min(weights) <= 0) {
+            IGRAPH_ERROR("Weights must be positive for DrL layout.", IGRAPH_EINVAL);
+        }
+    }
 
+    IGRAPH_HANDLE_EXCEPTIONS(
         drl::graph neighbors(graph, options, weights);
         neighbors.init_parms(options);
         if (use_seed) {
             IGRAPH_CHECK(igraph_matrix_resize(res, igraph_vcount(graph), 2));
-            neighbors.read_real(res, fixed);
+            neighbors.read_real(res);
         }
-        neighbors.draw_graph(res);
-
-        RNG_END();
+        IGRAPH_CHECK(neighbors.draw_graph(res));
     );
 
     return IGRAPH_SUCCESS;

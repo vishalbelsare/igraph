@@ -33,15 +33,15 @@ jobs:
 
     steps:
     - name: Install dependencies
-      run: sudo apt-get install ninja-build cmake libarpack2-dev libglpk-dev libgmp-dev
+      run: sudo apt-get update && sudo apt-get install ninja-build cmake libarpack2-dev libglpk-dev libgmp-dev
     - name: Checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v5
       with:
         fetch-depth: 0
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v1
+      uses: github/codeql-action/init@v3
       with:
         config-file: ./.github/codeql/codeql-config.yml
         languages: ${{ matrix.language }}
@@ -58,11 +58,11 @@ jobs:
     #    uses a compiled language
 
     - run: |
-        cmake -GNinja -B build
+        cmake -GNinja -B build -DFLEX_KEEP_LINE_NUMBERS=ON
         cmake --build build
         # Remove temporary CMake stuff so the code analysis does not run on
         # them
         rm -rf build/CMakeFiles/CMakeTmp
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v1
+      uses: github/codeql-action/analyze@v3

@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2006-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard st, Cambridge MA, 02139 USA
 
@@ -27,29 +26,28 @@
 
 #include "layout/layout_internal.h"
 
-#include "test_utilities.inc"
+#include "test_utilities.h"
 
-int main () {
-    long int i;
+int main(void) {
+    igraph_int_t i;
     igraph_matrix_t m;
     igraph_real_t x, y, z, r;
 
-    srand(42); /* make tests deterministic */
+    igraph_rng_seed(igraph_rng_default(), 42); /* make tests deterministic */
 
     /* 2D */
     igraph_matrix_init(&m, 1000, 2);
     for (i = 0; i < igraph_matrix_nrow(&m); i++) {
-        MATRIX(m, i, 0) = rand() / (double)RAND_MAX;
-        MATRIX(m, i, 1) = rand() / (double)RAND_MAX;
+        MATRIX(m, i, 0) = RNG_UNIF01();
+        MATRIX(m, i, 1) = RNG_UNIF01();
     }
     igraph_i_layout_sphere_2d(&m, &x, &y, &r);
 
     for (i = 0; i < igraph_matrix_nrow(&m); i++) {
-        igraph_real_t dist = sqrt((MATRIX(m, i, 0) - x) * (MATRIX(m, i, 0) - x) +
-                                  (MATRIX(m, i, 1) - y) * (MATRIX(m, i, 1) - y));
+        igraph_real_t dist = hypot(MATRIX(m, i, 0) - x, MATRIX(m, i, 1) - y);
         if (dist > r) {
             printf("x: %f y: %f r: %f\n", x, y, r);
-            printf("x: %f y: %f dist: %f (%li)\n",
+            printf("x: %f y: %f dist: %f (%" IGRAPH_PRId ")\n",
                    MATRIX(m, i, 0), MATRIX(m, i, 1), dist, i);
             return 1;
         }
@@ -59,9 +57,9 @@ int main () {
     /* 3D */
     igraph_matrix_init(&m, 1000, 3);
     for (i = 0; i < igraph_matrix_nrow(&m); i++) {
-        MATRIX(m, i, 0) = rand() / (double)RAND_MAX;
-        MATRIX(m, i, 1) = rand() / (double)RAND_MAX;
-        MATRIX(m, i, 2) = rand() / (double)RAND_MAX;
+        MATRIX(m, i, 0) = RNG_UNIF01();
+        MATRIX(m, i, 1) = RNG_UNIF01();
+        MATRIX(m, i, 2) = RNG_UNIF01();
     }
     igraph_i_layout_sphere_3d(&m, &x, &y, &z, &r);
 
@@ -71,7 +69,7 @@ int main () {
                                   (MATRIX(m, i, 2) - z) * (MATRIX(m, i, 2) - z));
         if (dist > r) {
             printf("x: %f y: %f z: %f r: %f\n", x, y, z, r);
-            printf("x: %f y: %f z: %f dist: %f (%li)\n",
+            printf("x: %f y: %f z: %f dist: %f (%" IGRAPH_PRId ")\n",
                    MATRIX(m, i, 0), MATRIX(m, i, 1), MATRIX(m, i, 2), dist, i);
             return 1;
         }

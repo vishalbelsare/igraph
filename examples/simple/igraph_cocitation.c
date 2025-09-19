@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2006-2020  The igraph development team <igraph@igraph.org>
 
    This program is free software; you can redistribute it and/or modify
@@ -20,9 +19,12 @@
 #include <igraph.h>
 #include <stdio.h>
 
-int main() {
+int main(void) {
     igraph_t graph;
     igraph_matrix_t matrix;
+
+    /* Initialize the library. */
+    igraph_setup();
 
     /* Create a small test graph. */
     igraph_small(&graph, 0, IGRAPH_DIRECTED,

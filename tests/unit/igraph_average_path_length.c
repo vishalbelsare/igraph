@@ -1,5 +1,5 @@
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2021  The igraph development team <igraph@igraph.org>
 
    This program is free software; you can redistribute it and/or modify
@@ -19,12 +19,12 @@
 #include <igraph.h>
 #include <stdio.h>
 
-#include "test_utilities.inc"
+#include "test_utilities.h"
 
 void print_and_destroy(igraph_t *graph, igraph_bool_t unconn) {
     igraph_real_t res, unconn_pairs;
 
-    igraph_average_path_length(graph, &res, &unconn_pairs, IGRAPH_DIRECTED, unconn);
+    igraph_average_path_length(graph, NULL, &res, &unconn_pairs, IGRAPH_DIRECTED, unconn);
     printf("Average shortest path length: ");
     print_real(stdout, res, "%g");
     printf("\nNo. of unconnected pairs: %g\n", unconn_pairs);
@@ -32,7 +32,7 @@ void print_and_destroy(igraph_t *graph, igraph_bool_t unconn) {
     igraph_destroy(graph);
 }
 
-int main() {
+int main(void) {
     igraph_t graph;
 
     printf("Null graph:\n");

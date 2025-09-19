@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2007-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard street, Cambridge, MA 02139 USA
 
@@ -24,28 +23,32 @@
 #include <igraph.h>
 #include <stdio.h>
 
-int main() {
-    igraph_t g;
+int main(void) {
+    igraph_t graph;
     FILE *ifile;
+
+    /* Initialize the library. */
+    igraph_setup();
 
     ifile = fopen("karate.gml", "r");
     if (ifile == 0) {
-        return 10;
+        return 1;
     }
 
-    igraph_read_graph_gml(&g, ifile);
+    igraph_read_graph_gml(&graph, ifile);
     fclose(ifile);
 
-    if (igraph_is_directed(&g)) {
-        printf("directed\n");
-    } else {
-        printf("undirected\n");
-    }
+    printf("The graph is %s.\n", igraph_is_directed(&graph) ? "directed" : "undirected");
 
-    igraph_write_graph_edgelist(&g, stdout);
-    printf("-----------------\n");
-    igraph_write_graph_gml(&g, stdout, 0, "test suite");
-    igraph_destroy(&g);
+    /* Output as edge list */
+    printf("\n-----------------\n");
+    igraph_write_graph_edgelist(&graph, stdout);
+
+    /* Output as GML */
+    printf("\n-----------------\n");
+    igraph_write_graph_gml(&graph, stdout,IGRAPH_WRITE_GML_DEFAULT_SW,  0, "");
+
+    igraph_destroy(&graph);
 
     return 0;
 }

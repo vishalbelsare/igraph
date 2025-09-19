@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard st, Cambridge MA, USA 02139
 
@@ -23,9 +22,9 @@
 
 #include <igraph.h>
 
-#include "test_utilities.inc"
+#include "test_utilities.h"
 
-int main() {
+int main(void) {
     igraph_matrix_t m;
 
     igraph_matrix_init(&m, 10, 10);

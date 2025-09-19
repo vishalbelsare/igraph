@@ -1,7 +1,18 @@
-# Minimum CMake that we require is 3.16 because we use --ignore-eol when
-# comparing unit test results with expected outcomes (added in 3.14) and we
-# also use SKIP_REGULAR_EXPRESSION to handle skipped tests properly
-cmake_minimum_required(VERSION 3.16)
+# Minimum CMake that we require is 3.18.
+# Some of the recent features we use:
+#  * --ignore-eol when comparing unit test results with expected outcomes (3.14)
+#  * CROSSCOMPILING_EMULATOR can be a semicolon-separated list to pass arguments (3.15)
+#  * SKIP_REGULAR_EXPRESSION to handle skipped tests properly (3.16)
+#  * CheckLinkerFlag for HAVE_NEW_DTAGS test (3.18)
+#  * cmake -E cat (3.18)
+cmake_minimum_required(VERSION 3.18...3.31)
+
+# CMake 3.31.0 issues warnings due to the following bug:
+# https://gitlab.kitware.com/cmake/cmake/-/issues/26449
+# Setting policy CMP0175 to OLD avoids the warnings.
+if(CMAKE_VERSION VERSION_EQUAL "3.31.0")
+  cmake_policy(SET CMP0175 OLD)
+endif()
 
 # Add etc/cmake to CMake's search path so we can put our private stuff there
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/etc/cmake)
@@ -38,6 +49,9 @@ project(
 # Include some compiler-related helpers and set global compiler options
 include(compilers)
 
+# Detect is certain attributes are supported by the compiler
+include(attribute_support)
+
 # Set default symbol visibility to hidden
 set(CMAKE_C_VISIBILITY_PRESET hidden)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
@@ -45,7 +59,7 @@ set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 # Set C and C++ standard version
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED True)
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # Expose the BUILD_SHARED_LIBS option in the ccmake UI
@@ -54,6 +68,16 @@ option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 # Add switches to use sanitizers and debugging helpers if needed
 include(debugging)
 include(sanitizers)
+
+# Enable fuzzer instrumentation if needed
+# FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION is a conventional
+# macro used to adapt code for fuzzability, for example by
+# reducing largest allowed graph sizes when reading various
+# file formats.
+if(BUILD_FUZZING)
+  add_compile_options(-fsanitize=fuzzer-no-link)
+  add_compile_definitions(FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION)
+endif()
 
 # Add version information
 configure_file(
@@ -70,21 +94,42 @@ find_dependencies()
 
 # Run compile-time checks, generate config.h and igraph_threading.h
 include(CheckSymbolExists)
+include(CheckIncludeFiles)
+include(CMakePushCheckState)
 
 # First we check for some functions and symbols
-check_symbol_exists(expm1 math.h HAVE_EXPM1)
-check_symbol_exists(fmin math.h HAVE_FMIN)
-check_symbol_exists(finite math.h HAVE_FINITE)
-check_symbol_exists(isfinite math.h HAVE_ISFINITE)
-check_symbol_exists(log2 math.h HAVE_LOG2)
-check_symbol_exists(log1p math.h HAVE_LOG1P)
-check_symbol_exists(rint math.h HAVE_RINT)
-check_symbol_exists(rintf math.h HAVE_RINTF)
-check_symbol_exists(round math.h HAVE_ROUND)
-check_symbol_exists(stpcpy string.h HAVE_STPCPY)
+cmake_push_check_state()
+if(NEED_LINKING_AGAINST_LIBM)
+  list(APPEND CMAKE_REQUIRED_LIBRARIES m)
+endif()
 check_symbol_exists(strcasecmp strings.h HAVE_STRCASECMP)
-check_symbol_exists(strdup string.h HAVE_STRDUP)
+check_symbol_exists(strncasecmp strings.h HAVE_STRNCASECMP)
 check_symbol_exists(_stricmp string.h HAVE__STRICMP)
+check_symbol_exists(_strnicmp string.h HAVE__STRNICMP)
+check_symbol_exists(strdup string.h HAVE_STRDUP)
+check_symbol_exists(strndup string.h HAVE_STRNDUP)
+check_include_files(xlocale.h HAVE_XLOCALE)
+if(HAVE_XLOCALE)
+  # On BSD, uselocale() is in xlocale.h instead of locale.h.
+  # Some systems provide xlocale.h, but uselocale() is still in locale.h,
+  # thus we try both.
+  check_symbol_exists(uselocale "xlocale.h;locale.h" HAVE_USELOCALE)
+else()
+  check_symbol_exists(uselocale locale.h HAVE_USELOCALE)
+endif()
+check_symbol_exists(_configthreadlocale locale.h HAVE__CONFIGTHREADLOCALE)
+cmake_pop_check_state()
+
+# Check for 128-bit integer multiplication support, floating-point endianness,
+# support for built-in overflow detection and fast bit operation support.
+include(ieee754_endianness)
+include(uint128_support)
+include(bit_operations_support)
+include(safe_math_support)
+
+if(NOT HAVE_USELOCALE AND NOT HAVE__CONFIGTHREADLOCALE)
+  message(WARNING "igraph cannot set per-thread locale on this platform. igraph_enter_safelocale() and igraph_exit_safelocale() will not be safe to use in multithreaded programs.")
+endif()
 
 # Check for code coverage support
 option(IGRAPH_ENABLE_CODE_COVERAGE "Enable code coverage calculation" OFF)
@@ -94,11 +139,14 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND IGRAPH_ENABLE_CODE_COVERAGE)
   setup_target_for_coverage_lcov(
     NAME coverage
     EXECUTABLE "${CMAKE_COMMAND}" "--build" "${PROJECT_BINARY_DIR}" "--target" "check"
-    # Generated files are excluded; apparently the CodeCoverage script has some
-    # problems with them. Yes, the exclusion is correct, it refers to a nonexistent
-    # directory that somehow gets into the coverage resolts. /Applications is for
-    # macOS -- it excludes files from the macOS SDK.
-    EXCLUDE "io/*.l" "io/parsers/*" "/Applications/Xcode*" "examples/*" "tests/*"
+    # The base directory is changed to allow finding the generated parser sources.
+    # The following works with 'Ninja'. For 'Unix Makefiles', this requires ${PROJECT_BINARY_DIR}/src.
+    BASE_DIRECTORY "${PROJECT_BINARY_DIR}"
+    # /Applications and /Library/Developer are for macOS -- they exclude files from the macOS SDK.
+    EXCLUDE "/Applications/Xcode*" "/Library/Developer/*" "examples/*" "interfaces/*" "tests/*" "vendor/infomap/*" "vendor/pcg/*"
+    # These errors, present with lcov 2.x, are likely due to incompatibility with llvm-cov on macOS.
+    LCOV_ARGS --ignore-errors inconsistent,format,unused
+    GENHTML_ARGS --ignore-errors inconsistent,corrupt,category,unmapped
   )
 endif()
 
@@ -106,6 +154,10 @@ endif()
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in
   ${CMAKE_CURRENT_BINARY_DIR}/src/config.h
+)
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/igraph_config.h.in
+  ${CMAKE_CURRENT_BINARY_DIR}/include/igraph_config.h
 )
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/include/igraph_threading.h.in
@@ -116,18 +168,18 @@ configure_file(
 # included as a sub-project in another CMake project
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
   include(CTest)
-  configure_file(
-    ${PROJECT_SOURCE_DIR}/etc/cmake/CTestCustom.cmake.in
-    ${PROJECT_BINARY_DIR}/CTestCustom.cmake
-  )
 endif()
 
 # Traverse subdirectories. vendor/ should come first because code in
 # src/CMakeLists.txt depends on targets in vendor/
 add_subdirectory(vendor)
 add_subdirectory(src)
+add_subdirectory(interfaces)
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)
   add_subdirectory(tests)
+endif()
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_FUZZING)
+  add_subdirectory(fuzzing)
 endif()
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
   add_subdirectory(doc)

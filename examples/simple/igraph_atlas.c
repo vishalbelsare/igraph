@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2006-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard street, Cambridge, MA 02139 USA
 
@@ -23,10 +22,11 @@
 
 #include <igraph.h>
 
-int main() {
-
+int main(void) {
     igraph_t g;
-    int ret;
+
+    /* Initialize the library. */
+    igraph_setup();
 
     igraph_atlas(&g, 45);
     igraph_write_graph_edgelist(&g, stdout);
@@ -42,17 +42,6 @@ int main() {
     igraph_write_graph_edgelist(&g, stdout);
     printf("\n");
     igraph_destroy(&g);
-
-    igraph_set_error_handler(igraph_error_handler_ignore);
-    ret = igraph_atlas(&g, -1);
-    if (ret != IGRAPH_EINVAL) {
-        return 1;
-    }
-
-    ret = igraph_atlas(&g, 1253);
-    if (ret != IGRAPH_EINVAL) {
-        return 2;
-    }
 
     return 0;
 }

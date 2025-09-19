@@ -1,7 +1,5 @@
-/* -*- mode: C -*-  */
-/* vim:set ts=4 sw=4 sts=4 et: */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2005-2020 The igraph development team
 
    This program is free software; you can redistribute it and/or modify
@@ -36,7 +34,7 @@
  * Note that if you want to add many edges to a big graph, then it is
  * inefficient to add them one by one, it is better to collect them into
  * a vector and add all of them via a single \ref igraph_add_edges() call.
- * \param igraph The graph.
+ * \param graph The graph.
  * \param from The id of the first vertex of the edge.
  * \param to The id of the second vertex of the edge.
  * \return Error code.
@@ -48,17 +46,16 @@
  * Time complexity: O(|V|+|E|), the number of edges plus the number of
  * vertices.
  */
-int igraph_add_edge(igraph_t *graph, igraph_integer_t from, igraph_integer_t to) {
-    igraph_vector_t edges;
-    int ret;
+igraph_error_t igraph_add_edge(igraph_t *graph, igraph_int_t from, igraph_int_t to) {
+    igraph_vector_int_t edges;
 
-    IGRAPH_VECTOR_INIT_FINALLY(&edges, 2);
+    IGRAPH_VECTOR_INT_INIT_FINALLY(&edges, 2);
 
     VECTOR(edges)[0] = from;
     VECTOR(edges)[1] = to;
-    IGRAPH_CHECK(ret = igraph_add_edges(graph, &edges, 0));
+    IGRAPH_CHECK(igraph_add_edges(graph, &edges, NULL));
 
-    igraph_vector_destroy(&edges);
+    igraph_vector_int_destroy(&edges);
     IGRAPH_FINALLY_CLEAN(1);
-    return ret;
+    return IGRAPH_SUCCESS;
 }

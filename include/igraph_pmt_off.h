@@ -1,8 +1,6 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
-   Copyright (C) 2007-2012  Gabor Csardi <csardi.gabor@gmail.com>
-   334 Harvard street, Cambridge, MA 02139 USA
+   igraph library.
+   Copyright (C) 2007-2025  The igraph development team <igraph@igraph.org>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -15,10 +13,7 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc.,  51 Franklin Street, Fifth Floor, Boston, MA
-   02110-1301 USA
-
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #ifdef ATOMIC
@@ -35,6 +30,14 @@
 
 #ifdef BASE_EPSILON
     #undef BASE_EPSILON
+#endif
+
+#ifdef BASE_MATRIX
+    #undef BASE_MATRIX
+#endif
+
+#ifdef BASE_VECTOR
+    #undef BASE_VECTOR
 #endif
 
 #ifdef CONCAT2
@@ -61,6 +64,14 @@
     #undef CONCAT4x
 #endif
 
+#ifdef CONCAT5
+    #undef CONCAT5
+#endif
+
+#ifdef CONCAT5x
+    #undef CONCAT5x
+#endif
+
 #ifdef FP
     #undef FP
 #endif
@@ -71,6 +82,10 @@
 
 #ifdef IN_FORMAT
     #undef IN_FORMAT
+#endif
+
+#ifdef INTERNAL_FUNCTION
+    #undef INTERNAL_FUNCTION
 #endif
 
 #ifdef MULTIPLICITY
@@ -149,8 +164,16 @@
     #undef PRINTFUNC
 #endif
 
+#ifdef SNPRINTFUNC
+    #undef SNPRINTFUNC
+#endif
+
+#ifdef FPRINTFUNC_ALIGNED
+    #undef FPRINTFUNC_ALIGNED
+#endif
+
 #ifdef FPRINTFUNC
-    #undef PRINTFUNC
+    #undef FPRINTFUNC
 #endif
 
 #ifdef UNSIGNED

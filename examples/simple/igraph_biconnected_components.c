@@ -1,8 +1,6 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
-   Copyright (C) 2006-2012  Gabor Csardi <csardi.gabor@gmail.com>
-   334 Harvard street, Cambridge, MA 02139 USA
+   igraph library.
+   Copyright (C) 2006-2024  The igraph development team <igraph@igraph.org>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -15,71 +13,59 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc.,  51 Franklin Street, Fifth Floor, Boston, MA
-   02110-1301 USA
-
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include <igraph.h>
-#include <stdlib.h>
 
-void sort_and_print_vector(igraph_vector_t *v) {
-    long int i, n = igraph_vector_size(v);
-    igraph_vector_sort(v);
-    for (i = 0; i < n; i++) {
-        printf(" %li", (long int) VECTOR(*v)[i]);
+/* Prints a vector of edge IDs as u--v vertex pairs. */
+void print_edge_vector(const igraph_t *graph, const igraph_vector_int_t *edges) {
+    const igraph_int_t n = igraph_vector_int_size(edges);
+    for (igraph_int_t i=0; i < n; i++) {
+        igraph_int_t edge = VECTOR(*edges)[i];
+        printf("%" IGRAPH_PRId "--%" IGRAPH_PRId " ", IGRAPH_FROM(graph, edge), IGRAPH_TO(graph, edge));
     }
     printf("\n");
 }
 
-void warning_handler_ignore(const char* reason, const char* file, int line, int e) {
-}
+int main(void) {
+    igraph_t graph;
+    igraph_vector_int_list_t component_vertices, component_edges;
+    igraph_int_t no;
 
-int main() {
+    /* Initialize the library. */
+    igraph_setup();
 
-    igraph_t g;
-    igraph_vector_ptr_t result;
-    igraph_integer_t no;
-    long int i;
+    /* Create an example graph. */
+    igraph_small(&graph, 7, IGRAPH_UNDIRECTED,
+                 0,1, 1,2, 2,3, 3,0,
+                 2,4, 4,5, 5,2,
+                 0,6,
+                 0,7,
+                 -1);
 
-    igraph_set_warning_handler(warning_handler_ignore);
+    /* The data structures that the result will be written to must be initialized first. */
+    igraph_vector_int_list_init(&component_vertices, 0);
+    igraph_vector_int_list_init(&component_edges, 0);
 
-    igraph_vector_ptr_init(&result, 0);
-    igraph_small(&g, 7, 0, 0, 1, 1, 2, 2, 3, 3, 0, 2, 4, 4, 5, 2, 5, -1);
+    igraph_biconnected_components(&graph, &no, NULL, &component_edges, &component_vertices, NULL);
 
-    igraph_biconnected_components(&g, &no, 0, 0, &result, 0);
-    if (no != 2 || no != igraph_vector_ptr_size(&result)) {
-        return 1;
-    }
-    for (i = 0; i < no; i++) {
-        sort_and_print_vector((igraph_vector_t*)VECTOR(result)[i]);
-        igraph_vector_destroy((igraph_vector_t*)VECTOR(result)[i]);
-        igraph_free((igraph_vector_t*)VECTOR(result)[i]);
-    }
-
-    igraph_biconnected_components(&g, &no, 0, &result, 0, 0);
-    if (no != 2 || no != igraph_vector_ptr_size(&result)) {
-        return 2;
-    }
-    for (i = 0; i < no; i++) {
-        sort_and_print_vector((igraph_vector_t*)VECTOR(result)[i]);
-        igraph_vector_destroy((igraph_vector_t*)VECTOR(result)[i]);
-        igraph_free((igraph_vector_t*)VECTOR(result)[i]);
+    printf("Number of components: %" IGRAPH_PRId "\n", no);
+    for (igraph_int_t i=0; i < no; i++) {
+        printf("\n");
+        printf("Component %" IGRAPH_PRId ":\n", i);
+        printf("Vertices: ");
+        igraph_vector_int_print(igraph_vector_int_list_get_ptr(&component_vertices, i));
+        printf("Edges: ");
+        print_edge_vector(&graph, igraph_vector_int_list_get_ptr(&component_edges, i));
     }
 
-    igraph_biconnected_components(&g, &no, &result, 0, 0, 0);
-    if (no != 2 || no != igraph_vector_ptr_size(&result)) {
-        return 3;
-    }
-    for (i = 0; i < no; i++) {
-        sort_and_print_vector((igraph_vector_t*)VECTOR(result)[i]);
-        igraph_vector_destroy((igraph_vector_t*)VECTOR(result)[i]);
-        igraph_free((igraph_vector_t*)VECTOR(result)[i]);
-    }
+    /* Destroy data structures after we no longer need them. */
 
-    igraph_vector_ptr_destroy(&result);
-    igraph_destroy(&g);
+    igraph_vector_int_list_destroy(&component_edges);
+    igraph_vector_int_list_destroy(&component_vertices);
+
+    igraph_destroy(&graph);
 
     return 0;
 }

@@ -1,8 +1,6 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
-   Copyright (C) 2009-2012  Gabor Csardi <csardi.gabor@gmail.com>
-   334 Harvard street, Cambridge, MA 02139 USA
+   igraph library.
+   Copyright (C) 2009-2025  The igraph development team <igraph@igraph.org>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -15,19 +13,17 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc.,  51 Franklin Street, Fifth Floor, Boston, MA
-   02110-1301 USA
-
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #ifndef IGRAPH_STACK_H
 #define IGRAPH_STACK_H
 
 #include "igraph_decls.h"
+#include "igraph_error.h"
 #include "igraph_types.h"
 
-__BEGIN_DECLS
+IGRAPH_BEGIN_C_DECLS
 
 /* -------------------------------------------------- */
 /* Plain stack                                        */
@@ -38,12 +34,6 @@ __BEGIN_DECLS
 #include "igraph_stack_pmt.h"
 #include "igraph_pmt_off.h"
 #undef BASE_IGRAPH_REAL
-
-#define BASE_LONG
-#include "igraph_pmt.h"
-#include "igraph_stack_pmt.h"
-#include "igraph_pmt_off.h"
-#undef BASE_LONG
 
 #define BASE_INT
 #include "igraph_pmt.h"
@@ -63,17 +53,14 @@ __BEGIN_DECLS
 #include "igraph_pmt_off.h"
 #undef BASE_BOOL
 
-#define BASE_PTR
-#include "igraph_pmt.h"
-#include "igraph_stack_pmt.h"
-#include "igraph_pmt_off.h"
-#undef BASE_PTR
-
 #define IGRAPH_STACK_NULL { 0,0,0 }
+#define IGRAPH_STACK_INIT_FINALLY(s, capacity) \
+    do { IGRAPH_CHECK(igraph_stack_init(s, capacity)); \
+        IGRAPH_FINALLY(igraph_stack_destroy, s); } while (0)
+#define IGRAPH_STACK_INT_INIT_FINALLY(s, capacity) \
+    do { IGRAPH_CHECK(igraph_stack_int_init(s, capacity)); \
+        IGRAPH_FINALLY(igraph_stack_int_destroy, s); } while (0)
 
-IGRAPH_EXPORT void igraph_stack_ptr_free_all(igraph_stack_ptr_t* s);
-IGRAPH_EXPORT void igraph_stack_ptr_destroy_all(igraph_stack_ptr_t* s);
-
-__END_DECLS
+IGRAPH_END_C_DECLS
 
 #endif

@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2006-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard st, Cambridge MA, 02139 USA
 
@@ -23,11 +22,13 @@
 
 #include <igraph.h>
 
-int main() {
-
+int main(void) {
     igraph_t g;
-    long int i;
-    igraph_integer_t size;
+    igraph_int_t i;
+    igraph_int_t size;
+
+    /* Initialize the library. */
+    igraph_setup();
 
     /* DIRECTED */
 

@@ -1,10 +1,13 @@
 
 #include <igraph.h>
 
-int main() {
+int main(void) {
     igraph_matrix_t m;
     igraph_vector_t x, y, z;
     igraph_real_t xz, xx;
+
+    /* Initialize the library. */
+    igraph_setup();
 
     igraph_vector_init_real(&x, 3, 1.0, 2.0, 3.0);
     igraph_vector_init_real(&y, 4, 4.0, 5.0, 6.0, 7.0);

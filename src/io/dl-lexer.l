@@ -1,5 +1,5 @@
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2007-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard st, Cambridge, MA, 02138 USA
 
@@ -23,7 +23,7 @@
 %{
 
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2007-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard st, Cambridge, MA, 02138 USA
 
@@ -44,12 +44,10 @@
 
 */
 
-#include "config.h"
-#include <stdlib.h>
-#include <stdarg.h>
-
 #include "io/dl-header.h"
 #include "io/parsers/dl-parser.h"
+
+#include <stdlib.h>
 
 #define YY_EXTRA_TYPE igraph_i_dl_parsedata_t*
 #define YY_USER_ACTION yylloc->first_line = yylineno;
@@ -71,6 +69,8 @@
 %option reentrant
 %option bison-bridge
 %option bison-locations
+%option yylineno
+%option caseless
 
 digit      [0-9]
 whitespace [ \t\v\f]
@@ -79,14 +79,13 @@ whitespace [ \t\v\f]
 
 %%
 
-<*>\n\r|\r\n|\r|\n         { return NEWLINE; }
+<*>\n\r|\r\n|\r|\n             { return NEWLINE; }
 
-[dD][lL]{whitespace}+      { return DL; }
-[nN]{whitespace}*[=]{whitespace}* {
-  return NEQ; }
-{digit}+                   { return NUM; }
+dl{whitespace}+                { return DL; }
+n{whitespace}*[=]{whitespace}* { return NEQ; }
+{digit}+                       { return NUM; }
 
-<INITIAL,LABELM>[dD][aA][tT][aA][:]        {
+<INITIAL,LABELM>data:        {
   switch (yyextra->mode) {
   case 0: BEGIN(FULLMATRIX);
     break;
@@ -97,29 +96,29 @@ whitespace [ \t\v\f]
   }
   return DATA; }
 
-[lL][aA][bB][eE][lL][sS]:  { BEGIN(LABELM); return LABELS; }
-<INITIAL,LABELM>[lL][aA][bB][eE][lL][sS]{whitespace}+[eE][mM][bB][eE][dD][dD][eE][dD]:?{whitespace}* {
+labels:  { BEGIN(LABELM); return LABELS; }
+<INITIAL,LABELM>labels{whitespace}+embedded:?{whitespace}* {
   return LABELSEMBEDDED; }
-[fF][oO][rR][mM][aA][tT]{whitespace}*[=]{whitespace}*[fF][uU][lL][lL][mM][aA][tT][rR][iI][xX]{whitespace}* {
+format{whitespace}*[=]{whitespace}*fullmatrix{whitespace}* {
   yyextra->mode=0; return FORMATFULLMATRIX; }
-[fF][oO][rR][mM][aA][tT]{whitespace}*[=]{whitespace}*[eE][dD][gG][eE][lL][iI][sS][tT][1]{whitespace}* {
+format{whitespace}*[=]{whitespace}*edgelist1{whitespace}* {
   yyextra->mode=1; return FORMATEDGELIST1; }
-[fF][oO][rR][mM][aA][tT]{whitespace}*[=]{whitespace}*[nN][oO][dD][eE][lL][iI][sS][tT][1]{whitespace}* {
+format{whitespace}*[=]{whitespace}*nodelist1{whitespace}* {
   yyextra->mode=2; return FORMATNODELIST1; }
 
 <LABELM>[, ]                               { /* eaten up */ }
-<LABELM>[^, \t\n\r\f\v]+{whitespace}*      { return LABEL; }
+<LABELM>[^, \t\n\r\f\v\0]+{whitespace}*    { return LABEL; }
 
 <FULLMATRIX>{digit}{whitespace}*          { return DIGIT; }
-<FULLMATRIX>[^ \t\n\r\v\f,]+              { return LABEL; }
+<FULLMATRIX>[^ \t\n\r\v\f\0,]+            { return LABEL; }
 <FULLMATRIX>{whitespace}                  { }
 
-<EDGELIST>\-?{digit}+(\.{digit}+)?([eE](\+|\-)?{digit}+)?  { return NUM; }
-<EDGELIST>[^ \t\n\r\v\f,]+                                 { return LABEL; }
+<EDGELIST>(\+|\-)?{digit}+(\.{digit}+)?([eE](\+|\-)?{digit}+)?  { return NUM; }
+<EDGELIST>[^ \t\n\r\v\f\0,]+                                 { return LABEL; }
 <EDGELIST>{whitespace}*                                    { }
 
 <NODELIST>{digit}+                      { return NUM; }
-<NODELIST>[^ \t\r\n\v\f,]+              { return LABEL; }
+<NODELIST>[^ \t\r\n\v\f\0,]+            { return LABEL; }
 <NODELIST>{whitespace}*                 { }
 
 {whitespace}+                      { /* eaten up */ }

@@ -1,8 +1,6 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
-   Copyright (C) 2010-2012  Gabor Csardi <csardi.gabor@gmail.com>
-   334 Harvard street, Cambridge, MA 02139 USA
+   igraph library.
+   Copyright (C) 2010-2025  The igraph development team <igraph@igraph.org>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -15,21 +13,20 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
-   02110-1301 USA
-
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #ifndef IGRAPH_EIGEN_H
 #define IGRAPH_EIGEN_H
 
 #include "igraph_decls.h"
+#include "igraph_datatype.h"
 #include "igraph_arpack.h"
+#include "igraph_error.h"
 #include "igraph_lapack.h"
 #include "igraph_sparsemat.h"
 
-__BEGIN_DECLS
+IGRAPH_BEGIN_C_DECLS
 
 typedef enum { IGRAPH_EIGEN_AUTO = 0,
                IGRAPH_EIGEN_LAPACK,
@@ -63,7 +60,7 @@ typedef struct igraph_eigen_which_t {
     igraph_lapack_dgeevx_balance_t balance;
 } igraph_eigen_which_t;
 
-IGRAPH_EXPORT int igraph_eigen_matrix_symmetric(const igraph_matrix_t *A,
+IGRAPH_EXPORT igraph_error_t igraph_eigen_matrix_symmetric(const igraph_matrix_t *A,
                                                 const igraph_sparsemat_t *sA,
                                                 igraph_arpack_function_t *fun, int n,
                                                 void *extra,
@@ -74,7 +71,7 @@ IGRAPH_EXPORT int igraph_eigen_matrix_symmetric(const igraph_matrix_t *A,
                                                 igraph_vector_t *values,
                                                 igraph_matrix_t *vectors);
 
-IGRAPH_EXPORT int igraph_eigen_matrix(const igraph_matrix_t *A,
+IGRAPH_EXPORT igraph_error_t igraph_eigen_matrix(const igraph_matrix_t *A,
                                       const igraph_sparsemat_t *sA,
                                       igraph_arpack_function_t *fun, int n,
                                       void *extra,
@@ -85,7 +82,7 @@ IGRAPH_EXPORT int igraph_eigen_matrix(const igraph_matrix_t *A,
                                       igraph_vector_complex_t *values,
                                       igraph_matrix_complex_t *vectors);
 
-IGRAPH_EXPORT int igraph_eigen_adjacency(const igraph_t *graph,
+IGRAPH_EXPORT igraph_error_t igraph_eigen_adjacency(const igraph_t *graph,
                                          igraph_eigen_algorithm_t algorithm,
                                          const igraph_eigen_which_t *which,
                                          igraph_arpack_options_t *options,
@@ -95,17 +92,6 @@ IGRAPH_EXPORT int igraph_eigen_adjacency(const igraph_t *graph,
                                          igraph_vector_complex_t *cmplxvalues,
                                          igraph_matrix_complex_t *cmplxvectors);
 
-IGRAPH_EXPORT int igraph_eigen_laplacian(const igraph_t *graph,
-                                         igraph_eigen_algorithm_t algorithm,
-                                         const igraph_eigen_which_t *which,
-                                         igraph_arpack_options_t *options,
-                                         igraph_arpack_storage_t *storage,
-                                         igraph_vector_t *values,
-                                         igraph_matrix_t *vectors,
-                                         igraph_vector_complex_t *cmplxvalues,
-                                         igraph_matrix_complex_t *cmplxvectors);
-
-
-__END_DECLS
+IGRAPH_END_C_DECLS
 
 #endif

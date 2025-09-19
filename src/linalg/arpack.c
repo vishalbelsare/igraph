@@ -1,7 +1,6 @@
-/* -*- mode: C -*-  */
 /* vim:set ts=4 sw=4 sts=4 noet: */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2007-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard street, Cambridge, MA 02139 USA
 
@@ -23,105 +22,76 @@
 */
 
 #include "igraph_arpack.h"
-#include "igraph_memory.h"
 
+#include "core/interruption.h"
 #include "linalg/arpack_internal.h"
+
+#include "igraph_memory.h"
+#include "igraph_random.h"
 
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
+#include <limits.h>
 
 /* The ARPACK example file dssimp.f is used as a template */
 
-static int igraph_i_arpack_err_dsaupd(int error) {
-    switch (error) {
-    case  1:      return IGRAPH_ARPACK_MAXIT;
-    case  3:      return IGRAPH_ARPACK_NOSHIFT;
-    case -1:      return IGRAPH_ARPACK_NPOS;
-    case -2:      return IGRAPH_ARPACK_NEVNPOS;
-    case -3:      return IGRAPH_ARPACK_NCVSMALL;
-    case -4:      return IGRAPH_ARPACK_NONPOSI;
-    case -5:      return IGRAPH_ARPACK_WHICHINV;
-    case -6:      return IGRAPH_ARPACK_BMATINV;
-    case -7:      return IGRAPH_ARPACK_WORKLSMALL;
-    case -8:      return IGRAPH_ARPACK_TRIDERR;
-    case -9:      return IGRAPH_ARPACK_ZEROSTART;
-    case -10:     return IGRAPH_ARPACK_MODEINV;
-    case -11:     return IGRAPH_ARPACK_MODEBMAT;
-    case -12:     return IGRAPH_ARPACK_ISHIFT;
-    case -13:     return IGRAPH_ARPACK_NEVBE;
-    case -9999:   return IGRAPH_ARPACK_NOFACT;
-    default:      return IGRAPH_ARPACK_UNKNOWN;
-    }
+static igraph_arpack_error_t igraph_i_arpack_err_dsaupd(int error);
+static igraph_arpack_error_t igraph_i_arpack_err_dseupd(int error);
+static igraph_arpack_error_t igraph_i_arpack_err_dnaupd(int error);
+static igraph_arpack_error_t igraph_i_arpack_err_dneupd(int error);
+
+static igraph_arpack_error_t last_arpack_error = IGRAPH_ARPACK_NO_ERROR;
+
+#define IGRAPH_ARPACK_ERROR(code) { \
+    last_arpack_error = code; \
+    IGRAPH_ERROR(igraph_arpack_error_to_string(code), IGRAPH_EARPACK); \
 }
 
-static int igraph_i_arpack_err_dseupd(int error) {
-    switch (error) {
-    case -1:      return IGRAPH_ARPACK_NPOS;
-    case -2:      return IGRAPH_ARPACK_NEVNPOS;
-    case -3:      return IGRAPH_ARPACK_NCVSMALL;
-    case -5:      return IGRAPH_ARPACK_WHICHINV;
-    case -6:      return IGRAPH_ARPACK_BMATINV;
-    case -7:      return IGRAPH_ARPACK_WORKLSMALL;
-    case -8:      return IGRAPH_ARPACK_TRIDERR;
-    case -9:      return IGRAPH_ARPACK_ZEROSTART;
-    case -10:     return IGRAPH_ARPACK_MODEINV;
-    case -11:     return IGRAPH_ARPACK_MODEBMAT;
-    case -12:     return IGRAPH_ARPACK_NEVBE;
-    case -14:     return IGRAPH_ARPACK_FAILED;
-    case -15:     return IGRAPH_ARPACK_HOWMNY;
-    case -16:     return IGRAPH_ARPACK_HOWMNYS;
-    case -17:     return IGRAPH_ARPACK_EVDIFF;
-    default:      return IGRAPH_ARPACK_UNKNOWN;
-    }
+/* Pristine ARPACK options object that is not exposed to the user; this is used
+ * as a template for \c igraph_i_arpack_options_default when the user requests
+ * a pointer to the default object */
+static const igraph_arpack_options_t igraph_i_arpack_options_pristine = {
+    /* .bmat = */ { 'I' },
+    /* .n = */ 0,
+    /* .which = */ { 'X', 'X' },
+    /* .nev = */ 1,
+    /* .tol = */ 0,
+    /* .ncv = */ 0, /* 0 means "automatic" */
+    /* .ldv = */ 0,
+    /* .ishift = */ 1,
+    /* .mxiter = */ 3000,
+    /* .nb = */ 1,
+    /* .mode = */ 1,
+    /* .start = */ 0,
+    /* .lworl = */ 0,
+    /* .sigma = */ 0,
+    /* .sigmai = */ 0,
+    /* .info = */ 0,
+    /* .ierr = */ 0,
+    /* .noiter = */ 0,
+    /* .nconv = */ 0,
+    /* .numop = */ 0,
+    /* .numopb = */ 0,
+    /* .numreo = */ 0,
+    /* .iparam = */ {
+        /* same as ishift: */ 1,
+        0,
+        /* same as mxiter: */ 3000,
+        /* same as nb: */ 1,
+        0,
+        0,
+        /* same as mode: */ 1
+        /* the rest are all zeros */
+    },
+    /* .ipntr = */ { 0 /* the rest are all zeros */ }
+};
 
-}
-
-static int igraph_i_arpack_err_dnaupd(int error) {
-    switch (error) {
-    case  1:      return IGRAPH_ARPACK_MAXIT;
-    case  3:      return IGRAPH_ARPACK_NOSHIFT;
-    case -1:      return IGRAPH_ARPACK_NPOS;
-    case -2:      return IGRAPH_ARPACK_NEVNPOS;
-    case -3:      return IGRAPH_ARPACK_NCVSMALL;
-    case -4:      return IGRAPH_ARPACK_NONPOSI;
-    case -5:      return IGRAPH_ARPACK_WHICHINV;
-    case -6:      return IGRAPH_ARPACK_BMATINV;
-    case -7:      return IGRAPH_ARPACK_WORKLSMALL;
-    case -8:      return IGRAPH_ARPACK_TRIDERR;
-    case -9:      return IGRAPH_ARPACK_ZEROSTART;
-    case -10:     return IGRAPH_ARPACK_MODEINV;
-    case -11:     return IGRAPH_ARPACK_MODEBMAT;
-    case -12:     return IGRAPH_ARPACK_ISHIFT;
-    case -9999:   return IGRAPH_ARPACK_NOFACT;
-    default:      return IGRAPH_ARPACK_UNKNOWN;
-    }
-}
-
-static int igraph_i_arpack_err_dneupd(int error) {
-    switch (error) {
-    case  1:      return IGRAPH_ARPACK_REORDER;
-    case -1:      return IGRAPH_ARPACK_NPOS;
-    case -2:      return IGRAPH_ARPACK_NEVNPOS;
-    case -3:      return IGRAPH_ARPACK_NCVSMALL;
-    case -5:      return IGRAPH_ARPACK_WHICHINV;
-    case -6:      return IGRAPH_ARPACK_BMATINV;
-    case -7:      return IGRAPH_ARPACK_WORKLSMALL;
-    case -8:      return IGRAPH_ARPACK_SHUR;
-    case -9:      return IGRAPH_ARPACK_LAPACK;
-    case -10:     return IGRAPH_ARPACK_MODEINV;
-    case -11:     return IGRAPH_ARPACK_MODEBMAT;
-    case -12:     return IGRAPH_ARPACK_HOWMNYS;
-    case -13:     return IGRAPH_ARPACK_HOWMNY;
-    case -14:     return IGRAPH_ARPACK_FAILED;
-    case -15:     return IGRAPH_ARPACK_EVDIFF;
-    default:      return IGRAPH_ARPACK_UNKNOWN;
-    }
-}
+static IGRAPH_THREAD_LOCAL igraph_arpack_options_t igraph_i_arpack_options_default;
 
 /**
  * \function igraph_arpack_options_init
- * Initialize ARPACK options
+ * \brief Initialize ARPACK options.
  *
  * Initializes ARPACK options, set them to default values.
  * You can always pass the initialized \ref igraph_arpack_options_t
@@ -130,16 +100,20 @@ static int igraph_i_arpack_err_dneupd(int error) {
  * calculation, e.g. \ref igraph_pagerank() always searches for the
  * eigenvalue with the largest magnitude, regardless of the supplied
  * value.
+ *
  * </para><para>
  * If you want to implement your own function involving eigenvalue
  * calculation using ARPACK, however, you will likely need to set up
  * the fields for yourself.
+ *
  * \param o The \ref igraph_arpack_options_t object to initialize.
  *
  * Time complexity: O(1).
  */
 
 void igraph_arpack_options_init(igraph_arpack_options_t *o) {
+    *o = igraph_i_arpack_options_pristine;
+
     o->bmat[0] = 'I';
     o->n = 0;         /* needs to be updated! */
     o->which[0] = 'X'; o->which[1] = 'X';
@@ -163,8 +137,28 @@ void igraph_arpack_options_init(igraph_arpack_options_t *o) {
 }
 
 /**
+ * \function igraph_arpack_options_get_default
+ * \brief Returns a pointer to a "default" ARPACK options object.
+ *
+ * This function is used by other igraph functions taking an \ref igraph_arpack_options_t
+ * object as an argument to get a reference to a pre-initialized "default"
+ * ARPACK options object when the user passes \c NULL instead of a real ARPACK
+ * options object. The object returned from this function is reset to a pristine
+ * state with every call to \c igraph_arpack_options_get_default().
+ *
+ * </para><para>
+ * The object returned from this function must \em not be destroyed.
+ *
+ * Time complexity: O(1).
+ */
+igraph_arpack_options_t* igraph_arpack_options_get_default(void) {
+    igraph_i_arpack_options_default = igraph_i_arpack_options_pristine;
+    return &igraph_i_arpack_options_default;
+}
+
+/**
  * \function igraph_arpack_storage_init
- * Initialize ARPACK storage
+ * \brief Initialize ARPACK storage.
  *
  * You only need this function if you want to run multiple eigenvalue
  * calculations using ARPACK, and want to spare the memory
@@ -173,9 +167,10 @@ void igraph_arpack_options_init(igraph_arpack_options_t *o) {
  * igraph_arpack_rssolve() and \ref igraph_arpack_rnsolve() to make
  * memory allocated and deallocated automatically.
  *
- * </para><para>Don't forget to call the \ref
- * igraph_arpack_storage_destroy() function on the storage object if
- * you don't need it any more.
+ * </para><para>
+ * Don't forget to call the \ref igraph_arpack_storage_destroy()
+ * function on the storage object if you don't need it any more.
+ *
  * \param s The \ref igraph_arpack_storage_t object to initialize.
  * \param maxn The maximum order of the matrices.
  * \param maxncv The maximum NCV parameter intended to use.
@@ -188,18 +183,28 @@ void igraph_arpack_options_init(igraph_arpack_options_t *o) {
  * Time complexity: O(maxncv*(maxldv+maxn)).
  */
 
-int igraph_arpack_storage_init(igraph_arpack_storage_t *s, long int maxn,
-                               long int maxncv, long int maxldv,
+igraph_error_t igraph_arpack_storage_init(igraph_arpack_storage_t *s, igraph_int_t maxn,
+                               igraph_int_t maxncv, igraph_int_t maxldv,
                                igraph_bool_t symm) {
 
     /* TODO: check arguments */
+    if (maxn > INT_MAX) {
+        IGRAPH_ERROR("Maximum order of matrices too large for ARPACK.", IGRAPH_EOVERFLOW);
+    }
+    if (maxncv > INT_MAX) {
+        IGRAPH_ERROR("Maximum NCV parameter too large for ARPACK.", IGRAPH_EOVERFLOW);
+    }
+    if (maxldv > INT_MAX) {
+        IGRAPH_ERROR("Maximum LDV parameter too large for ARPACK.", IGRAPH_EOVERFLOW);
+    }
+
     s->maxn = (int) maxn;
     s->maxncv = (int) maxncv;
     s->maxldv = (int) maxldv;
 
 #define CHECKMEM(x) \
     if (!x) { \
-        IGRAPH_ERROR("Cannot allocate memory for ARPACK", IGRAPH_ENOMEM); \
+        IGRAPH_ERROR("Cannot allocate memory for ARPACK", IGRAPH_ENOMEM); /* LCOV_EXCL_LINE */ \
     } \
     IGRAPH_FINALLY(igraph_free, x);
 
@@ -224,12 +229,12 @@ int igraph_arpack_storage_init(igraph_arpack_storage_t *s, long int maxn,
 #undef CHECKMEM
 
     IGRAPH_FINALLY_CLEAN(7);
-    return 0;
+    return IGRAPH_SUCCESS;
 }
 
 /**
  * \function igraph_arpack_storage_destroy
- * Deallocate ARPACK storage
+ * \brief Deallocate ARPACK storage.
  *
  * \param s The \ref igraph_arpack_storage_t object for which the
  *    memory will be deallocated.
@@ -259,22 +264,19 @@ void igraph_arpack_storage_destroy(igraph_arpack_storage_t *s) {
  * "Solver" for 1x1 eigenvalue problems since ARPACK sometimes blows up with
  * these.
  */
-static int igraph_i_arpack_rssolve_1x1(igraph_arpack_function_t *fun, void *extra,
+static igraph_error_t igraph_i_arpack_rssolve_1x1(igraph_arpack_function_t *fun, void *extra,
                                        igraph_arpack_options_t* options,
                                        igraph_vector_t* values, igraph_matrix_t* vectors) {
     igraph_real_t a, b;
     int nev = options->nev;
 
     if (nev <= 0) {
-        IGRAPH_ERROR("ARPACK error", IGRAPH_ARPACK_NEVNPOS);
+        IGRAPH_ARPACK_ERROR(IGRAPH_ARPACK_NEVNPOS);
     }
 
     /* Probe the value in the matrix */
     a = 1;
-    if (fun(&b, &a, 1, extra)) {
-        IGRAPH_ERROR("ARPACK error while evaluating matrix-vector product",
-                     IGRAPH_ARPACK_PROD);
-    }
+    IGRAPH_CHECK(fun(&b, &a, 1, extra));
 
     options->nconv = nev;
 
@@ -295,22 +297,19 @@ static int igraph_i_arpack_rssolve_1x1(igraph_arpack_function_t *fun, void *extr
  * "Solver" for 1x1 eigenvalue problems since ARPACK sometimes blows up with
  * these.
  */
-static int igraph_i_arpack_rnsolve_1x1(igraph_arpack_function_t *fun, void *extra,
+static igraph_error_t igraph_i_arpack_rnsolve_1x1(igraph_arpack_function_t *fun, void *extra,
                                        igraph_arpack_options_t* options,
                                        igraph_matrix_t* values, igraph_matrix_t* vectors) {
     igraph_real_t a, b;
     int nev = options->nev;
 
     if (nev <= 0) {
-        IGRAPH_ERROR("ARPACK error", IGRAPH_ARPACK_NEVNPOS);
+        IGRAPH_ARPACK_ERROR(IGRAPH_ARPACK_NEVNPOS);
     }
 
     /* Probe the value in the matrix */
     a = 1;
-    if (fun(&b, &a, 1, extra)) {
-        IGRAPH_ERROR("ARPACK error while evaluating matrix-vector product",
-                     IGRAPH_ARPACK_PROD);
-    }
+    IGRAPH_CHECK(fun(&b, &a, 1, extra));
 
     options->nconv = nev;
 
@@ -331,7 +330,7 @@ static int igraph_i_arpack_rnsolve_1x1(igraph_arpack_function_t *fun, void *extr
  * "Solver" for 2x2 nonsymmetric eigenvalue problems since ARPACK sometimes
  * blows up with these.
  */
-static int igraph_i_arpack_rnsolve_2x2(igraph_arpack_function_t *fun, void *extra,
+static igraph_error_t igraph_i_arpack_rnsolve_2x2(igraph_arpack_function_t *fun, void *extra,
                                        igraph_arpack_options_t* options, igraph_matrix_t* values,
                                        igraph_matrix_t* vectors) {
     igraph_real_t vec[2], mat[4];
@@ -339,12 +338,12 @@ static int igraph_i_arpack_rnsolve_2x2(igraph_arpack_function_t *fun, void *extr
     igraph_real_t trace, det, tsq4_minus_d;
     igraph_complex_t eval1, eval2;
     igraph_complex_t evec1[2], evec2[2];
-    igraph_bool_t swap_evals = 0;
-    igraph_bool_t complex_evals = 0;
+    igraph_bool_t swap_evals = false;
+    igraph_bool_t complex_evals = false;
     int nev = options->nev;
 
     if (nev <= 0) {
-        IGRAPH_ERROR("ARPACK error", IGRAPH_ARPACK_NEVNPOS);
+        IGRAPH_ARPACK_ERROR(IGRAPH_ARPACK_NEVNPOS);
     }
     if (nev > 2) {
         nev = 2;
@@ -352,15 +351,9 @@ static int igraph_i_arpack_rnsolve_2x2(igraph_arpack_function_t *fun, void *extr
 
     /* Probe the values in the matrix */
     vec[0] = 1; vec[1] = 0;
-    if (fun(mat, vec, 2, extra)) {
-        IGRAPH_ERROR("ARPACK error while evaluating matrix-vector product",
-                     IGRAPH_ARPACK_PROD);
-    }
+    IGRAPH_CHECK(fun(mat, vec, 2, extra));
     vec[0] = 0; vec[1] = 1;
-    if (fun(mat + 2, vec, 2, extra)) {
-        IGRAPH_ERROR("ARPACK error while evaluating matrix-vector product",
-                     IGRAPH_ARPACK_PROD);
-    }
+    IGRAPH_CHECK(fun(mat + 2, vec, 2, extra));
     a = mat[0]; b = mat[2]; c = mat[1]; d = mat[3];
 
     /* Get the trace and the determinant */
@@ -402,7 +395,7 @@ static int igraph_i_arpack_rnsolve_2x2(igraph_arpack_function_t *fun, void *extr
     if (options->which[0] == 'S') {
         if (options->which[1] == 'M') {
             /* eval1 must be the one with the smallest magnitude */
-            swap_evals = (igraph_complex_mod(eval1) > igraph_complex_mod(eval2));
+            swap_evals = (igraph_complex_abs(eval1) > igraph_complex_abs(eval2));
         } else if (options->which[1] == 'R') {
             /* eval1 must be the one with the smallest real part */
             swap_evals = (IGRAPH_REAL(eval1) > IGRAPH_REAL(eval2));
@@ -410,12 +403,12 @@ static int igraph_i_arpack_rnsolve_2x2(igraph_arpack_function_t *fun, void *extr
             /* eval1 must be the one with the smallest imaginary part */
             swap_evals = (IGRAPH_IMAG(eval1) > IGRAPH_IMAG(eval2));
         } else {
-            IGRAPH_ERROR("ARPACK error", IGRAPH_ARPACK_WHICHINV);
+            IGRAPH_ARPACK_ERROR(IGRAPH_ARPACK_WHICHINV);
         }
     } else if (options->which[0] == 'L') {
         if (options->which[1] == 'M') {
             /* eval1 must be the one with the largest magnitude */
-            swap_evals = (igraph_complex_mod(eval1) < igraph_complex_mod(eval2));
+            swap_evals = (igraph_complex_abs(eval1) < igraph_complex_abs(eval2));
         } else if (options->which[1] == 'R') {
             /* eval1 must be the one with the largest real part */
             swap_evals = (IGRAPH_REAL(eval1) < IGRAPH_REAL(eval2));
@@ -423,13 +416,13 @@ static int igraph_i_arpack_rnsolve_2x2(igraph_arpack_function_t *fun, void *extr
             /* eval1 must be the one with the largest imaginary part */
             swap_evals = (IGRAPH_IMAG(eval1) < IGRAPH_IMAG(eval2));
         } else {
-            IGRAPH_ERROR("ARPACK error", IGRAPH_ARPACK_WHICHINV);
+            IGRAPH_ARPACK_ERROR(IGRAPH_ARPACK_WHICHINV);
         }
     } else if (options->which[0] == 'X' && options->which[1] == 'X') {
         /* No preference on the ordering of eigenvectors */
     } else {
         /* fprintf(stderr, "%c%c\n", options->which[0], options->which[1]); */
-        IGRAPH_ERROR("ARPACK error", IGRAPH_ARPACK_WHICHINV);
+        IGRAPH_ARPACK_ERROR(IGRAPH_ARPACK_WHICHINV);
     }
 
     options->nconv = nev;
@@ -485,7 +478,7 @@ static int igraph_i_arpack_rnsolve_2x2(igraph_arpack_function_t *fun, void *extr
  * "Solver" for symmetric 2x2 eigenvalue problems since ARPACK sometimes blows
  * up with these.
  */
-static int igraph_i_arpack_rssolve_2x2(igraph_arpack_function_t *fun, void *extra,
+static igraph_error_t igraph_i_arpack_rssolve_2x2(igraph_arpack_function_t *fun, void *extra,
                                        igraph_arpack_options_t* options, igraph_vector_t* values,
                                        igraph_matrix_t* vectors) {
     igraph_real_t vec[2], mat[4];
@@ -495,7 +488,7 @@ static int igraph_i_arpack_rssolve_2x2(igraph_arpack_function_t *fun, void *extr
     int nev = options->nev;
 
     if (nev <= 0) {
-        IGRAPH_ERROR("ARPACK error", IGRAPH_ARPACK_NEVNPOS);
+        IGRAPH_ARPACK_ERROR(IGRAPH_ARPACK_NEVNPOS);
     }
     if (nev > 2) {
         nev = 2;
@@ -503,15 +496,9 @@ static int igraph_i_arpack_rssolve_2x2(igraph_arpack_function_t *fun, void *extr
 
     /* Probe the values in the matrix */
     vec[0] = 1; vec[1] = 0;
-    if (fun(mat, vec, 2, extra)) {
-        IGRAPH_ERROR("ARPACK error while evaluating matrix-vector product",
-                     IGRAPH_ARPACK_PROD);
-    }
+    IGRAPH_CHECK(fun(mat, vec, 2, extra));
     vec[0] = 0; vec[1] = 1;
-    if (fun(mat + 2, vec, 2, extra)) {
-        IGRAPH_ERROR("ARPACK error while evaluating matrix-vector product",
-                     IGRAPH_ARPACK_PROD);
-    }
+    IGRAPH_CHECK(fun(mat + 2, vec, 2, extra));
     a = mat[0]; b = mat[2]; c = mat[1]; d = mat[3];
 
     /* Get the trace and the determinant */
@@ -550,7 +537,7 @@ static int igraph_i_arpack_rssolve_2x2(igraph_arpack_function_t *fun, void *extr
     } else if (options->which[0] == 'X' && options->which[1] == 'X') {
         /* No preference on the ordering of eigenvectors */
     } else {
-        IGRAPH_ERROR("ARPACK error", IGRAPH_ARPACK_WHICHINV);
+        IGRAPH_ARPACK_ERROR(IGRAPH_ARPACK_WHICHINV);
     }
 
     options->nconv = nev;
@@ -576,9 +563,9 @@ static int igraph_i_arpack_rssolve_2x2(igraph_arpack_function_t *fun, void *extr
     return IGRAPH_SUCCESS;
 }
 
-int igraph_arpack_rssort(igraph_vector_t *values, igraph_matrix_t *vectors,
-                         const igraph_arpack_options_t *options,
-                         igraph_real_t *d, const igraph_real_t *v) {
+igraph_error_t igraph_arpack_rssort(igraph_vector_t *values, igraph_matrix_t *vectors,
+                                    const igraph_arpack_options_t *options,
+                                    igraph_real_t *d, const igraph_real_t *v) {
 
     igraph_vector_t order;
     char sort[2];
@@ -601,9 +588,15 @@ int igraph_arpack_rssort(igraph_vector_t *values, igraph_matrix_t *vectors,
         sort[0] = 'L'; sort[1] = 'M';
     } else if (which('B', 'E')) {
         sort[0] = 'L'; sort[1] = 'A';
+    } else {
+        /* None of the above, no sorting. These 'X' values are
+         * ignored by ARPACK, but we set them anyway in order to
+         * avoid an uninitialized 'sort' which would trigger
+         * checkers such as MemorySanitizer. */
+        sort[0] = 'X'; sort[1] = 'X';
     }
 
-    IGRAPH_CHECK(igraph_vector_init_seq(&order, 0, nconv - 1));
+    IGRAPH_CHECK(igraph_vector_init_range(&order, 0, nconv));
     IGRAPH_FINALLY(igraph_vector_destroy, &order);
 #ifdef HAVE_GFORTRAN
     igraphdsortr_(sort, &apply, &nconv, d, VECTOR(order), /*which_len=*/ 2);
@@ -655,10 +648,10 @@ int igraph_arpack_rssort(igraph_vector_t *values, igraph_matrix_t *vectors,
     igraph_vector_destroy(&order);
     IGRAPH_FINALLY_CLEAN(1);
 
-    return 0;
+    return IGRAPH_SUCCESS;
 }
 
-int igraph_arpack_rnsort(igraph_matrix_t *values, igraph_matrix_t *vectors,
+igraph_error_t igraph_arpack_rnsort(igraph_matrix_t *values, igraph_matrix_t *vectors,
                          const igraph_arpack_options_t *options,
                          igraph_real_t *dr, igraph_real_t *di,
                          igraph_real_t *v) {
@@ -686,11 +679,17 @@ int igraph_arpack_rnsort(igraph_matrix_t *values, igraph_matrix_t *vectors,
         sort[0] = 'S'; sort[1] = 'I';
     } else if (which('S', 'I')) {
         sort[0] = 'L'; sort[1] = 'I';
+    } else {
+        /* None of the above, no sorting. These 'X' values are
+         * ignored by ARPACK, but we set them anyway in order to
+         * avoid an uninitialized 'sort' which would trigger
+         * checkers such as MemorySanitizer. */
+        sort[0] = 'X'; sort[1] = 'X';
     }
 
 #undef which
 
-    IGRAPH_CHECK(igraph_vector_init_seq(&order, 0, nconv - 1));
+    IGRAPH_CHECK(igraph_vector_init_range(&order, 0, nconv));
     IGRAPH_FINALLY(igraph_vector_destroy, &order);
 #ifdef HAVE_GFORTRAN
     igraphdsortc_(sort, &apply, &nconv, dr, di, VECTOR(order), /*which_len=*/ 2);
@@ -772,7 +771,7 @@ int igraph_arpack_rnsort(igraph_matrix_t *values, igraph_matrix_t *vectors,
         }
     }
 
-    return 0;
+    return IGRAPH_SUCCESS;
 }
 
 /**
@@ -792,11 +791,15 @@ static void igraph_i_arpack_auto_ncv(igraph_arpack_options_t* options) {
         options->ncv = 20;
     }
     /* ...but having ncv close to n leads to some problems with small graphs
-     * (example: PageRank of "A <--> C, D <--> E, B"), so we don't let it
-     * to be larger than n / 2...
+     * (example: PageRank of "A <--> C, D <--> E, B"), so we try to keep it
+     * no more than min(n/2 + 2, n - 1), bounds found empirically using the
+     * eigen_stress.c test...
      */
-    if (options->ncv > options->n / 2) {
-        options->ncv = options->n / 2;
+    if (options->ncv > options->n / 2 + 2) {
+        options->ncv = options->n / 2 + 2;
+    }
+    if (options->ncv > options->n - 1) {
+        options->ncv = options->n - 1;
     }
     /* ...but we need at least min_ncv. */
     if (options->ncv < min_ncv) {
@@ -823,7 +826,7 @@ static void igraph_i_arpack_report_no_convergence(const igraph_arpack_options_t*
 
 /**
  * \function igraph_arpack_rssolve
- * \brief ARPACK solver for symmetric matrices
+ * \brief ARPACK solver for symmetric matrices.
  *
  * This is the ARPACK solver for symmetric matrices. Please use
  * \ref igraph_arpack_rnsolve() for non-symmetric matrices.
@@ -843,7 +846,7 @@ static void igraph_i_arpack_report_no_convergence(const igraph_arpack_options_t*
  * \param vectors If not a null pointer, then it must be a pointer to
  *     an initialized matrix. The eigenvectors will be stored in the
  *     columns of the matrix. The matrix will be resized as needed.
- *     Either this or the \p vectors argument must be non-null if the
+ *     Either this or the \p storage argument must be non-null if the
  *     ARPACK iteration is started from a given starting vector. If
  *     both are given \p vectors take precedence.
  * \return Error code.
@@ -855,18 +858,18 @@ static void igraph_i_arpack_report_no_convergence(const igraph_arpack_options_t*
  * are found in O(n) time as well.
  */
 
-int igraph_arpack_rssolve(igraph_arpack_function_t *fun, void *extra,
+igraph_error_t igraph_arpack_rssolve(igraph_arpack_function_t *fun, void *extra,
                           igraph_arpack_options_t *options,
                           igraph_arpack_storage_t *storage,
                           igraph_vector_t *values, igraph_matrix_t *vectors) {
 
     igraph_real_t *v, *workl, *workd, *d, *resid, *ax;
-    igraph_bool_t free_them = 0;
+    igraph_bool_t free_them = false;
     int *select, i;
 
     int ido = 0;
     int rvec = vectors || storage ? 1 : 0; /* calculate eigenvectors? */
-    char *all = "All";
+    char *all = "A";
 
     int origldv = options->ldv, origlworkl = options->lworkl,
         orignev = options->nev, origncv = options->ncv;
@@ -920,11 +923,11 @@ int igraph_arpack_rssolve(igraph_arpack_function_t *fun, void *extra,
 
     } else {
         /* Storage not provided */
-        free_them = 1;
+        free_them = true;
 
 #define CHECKMEM(x) \
     if (!x) { \
-        IGRAPH_ERROR("Cannot allocate memory for ARPACK", IGRAPH_ENOMEM); \
+        IGRAPH_ERROR("Cannot allocate memory for ARPACK", IGRAPH_ENOMEM); /* LCOV_EXCL_LINE */ \
     } \
     IGRAPH_FINALLY(igraph_free, x);
 
@@ -953,13 +956,14 @@ int igraph_arpack_rssolve(igraph_arpack_function_t *fun, void *extra,
     options->iparam[8] = 0;   // return value
     options->iparam[9] = 0;   // return value
     options->iparam[10] = 0;  // return value
-    options->info = options->start;
+    options->info = 1;  // always use a provided starting vector
     if (options->start) {
+        // user provided the starting vector so we just use that
         if (!storage && !vectors) {
             IGRAPH_ERROR("Starting vector not given", IGRAPH_EINVAL);
         }
         if (vectors && (igraph_matrix_nrow(vectors) != options->n ||
-                        igraph_matrix_ncol(vectors) != 1)) {
+                        igraph_matrix_ncol(vectors) < 1)) {
             IGRAPH_ERROR("Invalid starting vector size", IGRAPH_EINVAL);
         }
         if (vectors) {
@@ -967,10 +971,20 @@ int igraph_arpack_rssolve(igraph_arpack_function_t *fun, void *extra,
                 resid[i] = MATRIX(*vectors, i, 0);
             }
         }
+    } else {
+        // we need to generate a random vector on our own; let's not rely on
+        // ARPACK to do so because we want to use our own RNG
+        for (i = 0; i < options->n; i++) {
+            resid[i] = RNG_UNIF(-1, 1);
+        }
     }
 
     /* Ok, we have everything */
     while (1) {
+        igraph_real_t *from, *to;
+
+        IGRAPH_ALLOW_INTERRUPTION();
+
 #ifdef HAVE_GFORTRAN
         igraphdsaupd_(&ido, options->bmat, &options->n, options->which,
                       &options->nev, &options->tol,
@@ -985,17 +999,22 @@ int igraph_arpack_rssolve(igraph_arpack_function_t *fun, void *extra,
                       options->iparam, options->ipntr,
                       workd, workl, &options->lworkl, &options->info);
 #endif
+        /* When there is a non-zero error code in options->info, we expect that
+         * ARPACK requests a termination of the iteration by setting ido=99. */
+        IGRAPH_ASSERT(ido == 99 || options->info == 0);
 
         if (ido == -1 || ido == 1) {
-            igraph_real_t *from = workd + options->ipntr[0] - 1;
-            igraph_real_t *to = workd + options->ipntr[1] - 1;
-            if (fun(to, from, options->n, extra) != 0) {
-                IGRAPH_ERROR("ARPACK error while evaluating matrix-vector product",
-                             IGRAPH_ARPACK_PROD);
-            }
-
-        } else {
+            from = workd + options->ipntr[0] - 1;
+            to = workd + options->ipntr[1] - 1;
+            IGRAPH_CHECK(fun(to, from, options->n, extra));
+        } else if (ido == 2) {
+            from = workd + options->ipntr[0] - 1;
+            to = workd + options->ipntr[1] - 1;
+            memcpy(to, from, sizeof(igraph_real_t) * options->n);
+        } else if (ido == 99) {
             break;
+        } else {
+            IGRAPH_ERRORF("Unexpected IDO value %d when running ARPACK.", IGRAPH_FAILURE, ido);
         }
     }
 
@@ -1003,7 +1022,7 @@ int igraph_arpack_rssolve(igraph_arpack_function_t *fun, void *extra,
         igraph_i_arpack_report_no_convergence(options);
     }
     if (options->info != 0) {
-        IGRAPH_ERROR("ARPACK error", igraph_i_arpack_err_dsaupd(options->info));
+        IGRAPH_ARPACK_ERROR(igraph_i_arpack_err_dsaupd(options->info));
     }
 
     options->ierr = 0;
@@ -1025,7 +1044,7 @@ int igraph_arpack_rssolve(igraph_arpack_function_t *fun, void *extra,
 #endif
 
     if (options->ierr != 0) {
-        IGRAPH_ERROR("ARPACK error", igraph_i_arpack_err_dseupd(options->ierr));
+        IGRAPH_ARPACK_ERROR(igraph_i_arpack_err_dseupd(options->ierr));
     }
 
     /* Save the result */
@@ -1063,12 +1082,12 @@ int igraph_arpack_rssolve(igraph_arpack_function_t *fun, void *extra,
         IGRAPH_FREE(v);
         IGRAPH_FINALLY_CLEAN(7);
     }
-    return 0;
+    return IGRAPH_SUCCESS;
 }
 
 /**
  * \function igraph_arpack_rnsolve
- * \brief ARPACK solver for non-symmetric matrices
+ * \brief ARPACK solver for non-symmetric matrices.
  *
  * Please always consider calling \ref igraph_arpack_rssolve() if your
  * matrix is symmetric, it is much faster.
@@ -1113,18 +1132,18 @@ int igraph_arpack_rssolve(igraph_arpack_function_t *fun, void *extra,
  * are found in O(n) time as well.
  */
 
-int igraph_arpack_rnsolve(igraph_arpack_function_t *fun, void *extra,
+igraph_error_t igraph_arpack_rnsolve(igraph_arpack_function_t *fun, void *extra,
                           igraph_arpack_options_t *options,
                           igraph_arpack_storage_t *storage,
                           igraph_matrix_t *values, igraph_matrix_t *vectors) {
 
     igraph_real_t *v, *workl, *workd, *dr, *di, *resid, *workev;
-    igraph_bool_t free_them = 0;
+    igraph_bool_t free_them = false;
     int *select, i;
 
     int ido = 0;
     int rvec = vectors || storage ? 1 : 0;
-    char *all = "All";
+    char *all = "A";
 
     int origldv = options->ldv, origlworkl = options->lworkl,
         orignev = options->nev, origncv = options->ncv;
@@ -1181,11 +1200,11 @@ int igraph_arpack_rnsolve(igraph_arpack_function_t *fun, void *extra,
 
     } else {
         /* Storage not provided */
-        free_them = 1;
+        free_them = true;
 
 #define CHECKMEM(x) \
     if (!x) { \
-        IGRAPH_ERROR("Cannot allocate memory for ARPACK", IGRAPH_ENOMEM); \
+        IGRAPH_ERROR("Cannot allocate memory for ARPACK", IGRAPH_ENOMEM); /* LCOV_EXCL_LINE */ \
     } \
     IGRAPH_FINALLY(igraph_free, x);
 
@@ -1216,7 +1235,7 @@ int igraph_arpack_rnsolve(igraph_arpack_function_t *fun, void *extra,
     options->iparam[8] = 0;   // return value
     options->iparam[9] = 0;   // return value
     options->iparam[10] = 0;  // return value
-    options->info = options->start;
+    options->info = 1;  // always use a provided starting vector
     if (options->start) {
         if (!storage && !vectors) {
             IGRAPH_ERROR("Starting vector not given", IGRAPH_EINVAL);
@@ -1230,10 +1249,20 @@ int igraph_arpack_rnsolve(igraph_arpack_function_t *fun, void *extra,
                 resid[i] = MATRIX(*vectors, i, 0);
             }
         }
+    } else {
+        // we need to generate a random vector on our own; let's not rely on
+        // ARPACK to do so because we want to use our own RNG
+        for (i = 0; i < options->n; i++) {
+            resid[i] = RNG_UNIF(-1, 1);
+        }
     }
 
     /* Ok, we have everything */
     while (1) {
+        igraph_real_t *from, *to;
+
+        IGRAPH_ALLOW_INTERRUPTION();
+
 #ifdef HAVE_GFORTRAN
         igraphdnaupd_(&ido, options->bmat, &options->n, options->which,
                       &options->nev, &options->tol,
@@ -1248,16 +1277,27 @@ int igraph_arpack_rnsolve(igraph_arpack_function_t *fun, void *extra,
                       options->iparam, options->ipntr,
                       workd, workl, &options->lworkl, &options->info);
 #endif
+        /* When there is a non-zero error code in options->info, we expect that
+         * ARPACK requests a termination of the iteration by setting ido=99. */
+        IGRAPH_ASSERT(ido == 99 || options->info == 0);
 
         if (ido == -1 || ido == 1) {
-            igraph_real_t *from = workd + options->ipntr[0] - 1;
-            igraph_real_t *to = workd + options->ipntr[1] - 1;
-            if (fun(to, from, options->n, extra) != 0) {
-                IGRAPH_ERROR("ARPACK error while evaluating matrix-vector product",
-                             IGRAPH_ARPACK_PROD);
-            }
-        } else {
+            from = workd + options->ipntr[0] - 1;
+            to = workd + options->ipntr[1] - 1;
+            IGRAPH_CHECK(fun(to, from, options->n, extra));
+        } else if (ido == 2) {
+            from = workd + options->ipntr[0] - 1;
+            to = workd + options->ipntr[1] - 1;
+            memcpy(to, from, sizeof(igraph_real_t) * options->n);
+        } else if (ido == 4) {
+            /* same as ido == 1 but the arguments are at different places */
+            from = workd + options->ipntr[0] - 1;
+            to = workd + options->ipntr[2] - 1;
+            IGRAPH_CHECK(fun(to, from, options->n, extra));
+        } else if (ido == 99) {
             break;
+        } else {
+            IGRAPH_ERRORF("Unexpected IDO value %d when running ARPACK.", IGRAPH_FAILURE, ido);
         }
     }
 
@@ -1265,7 +1305,7 @@ int igraph_arpack_rnsolve(igraph_arpack_function_t *fun, void *extra,
         igraph_i_arpack_report_no_convergence(options);
     }
     if (options->info != 0 && options->info != -9999) {
-        IGRAPH_ERROR("ARPACK error", igraph_i_arpack_err_dnaupd(options->info));
+        IGRAPH_ARPACK_ERROR(igraph_i_arpack_err_dnaupd(options->info));
     }
 
     options->ierr = 0;
@@ -1287,7 +1327,7 @@ int igraph_arpack_rnsolve(igraph_arpack_function_t *fun, void *extra,
 #endif
 
     if (options->ierr != 0) {
-        IGRAPH_ERROR("ARPACK error", igraph_i_arpack_err_dneupd(options->info));
+        IGRAPH_ARPACK_ERROR(igraph_i_arpack_err_dneupd(options->ierr));
     }
 
     /* Save the result */
@@ -1329,12 +1369,12 @@ int igraph_arpack_rnsolve(igraph_arpack_function_t *fun, void *extra,
         IGRAPH_FREE(v);
         IGRAPH_FINALLY_CLEAN(8);
     }
-    return 0;
+    return IGRAPH_SUCCESS;
 }
 
 /**
  * \function igraph_arpack_unpack_complex
- * \brief Make the result of the non-symmetric ARPACK solver more readable
+ * \brief Makes the result of the non-symmetric ARPACK solver more readable.
  *
  * This function works on the output of \ref igraph_arpack_rnsolve and
  * brushes it up a bit: it only keeps \p nev eigenvalues/vectors and
@@ -1365,22 +1405,21 @@ int igraph_arpack_rnsolve(igraph_arpack_function_t *fun, void *extra,
  * matrix.
  */
 
-int igraph_arpack_unpack_complex(igraph_matrix_t *vectors, igraph_matrix_t *values,
-                                 long int nev) {
+igraph_error_t igraph_arpack_unpack_complex(igraph_matrix_t *vectors, igraph_matrix_t *values,
+                                 igraph_int_t nev) {
 
-    long int nodes = igraph_matrix_nrow(vectors);
-    long int no_evs = igraph_matrix_nrow(values);
-    long int i, j;
-    long int new_vector_pos;
-    long int vector_pos;
+    igraph_int_t nodes = igraph_matrix_nrow(vectors);
+    igraph_int_t no_evs = igraph_matrix_nrow(values);
+    igraph_int_t i, j;
+    igraph_int_t new_vector_pos, vector_pos;
     igraph_matrix_t new_vectors;
 
     /* Error checks */
     if (nev < 0) {
-        IGRAPH_ERROR("`nev' cannot be negative", IGRAPH_EINVAL);
+        IGRAPH_ERROR("`nev' cannot be negative.", IGRAPH_EINVAL);
     }
     if (nev > no_evs) {
-        IGRAPH_ERROR("`nev' too large, we don't have that many in `values'",
+        IGRAPH_ERROR("`nev' too large, we don't have that many in `values'.",
                      IGRAPH_EINVAL);
     }
 
@@ -1430,9 +1469,166 @@ int igraph_arpack_unpack_complex(igraph_matrix_t *vectors, igraph_matrix_t *valu
         }
     }
     igraph_matrix_destroy(vectors);
-    IGRAPH_CHECK(igraph_matrix_copy(vectors, &new_vectors));
+    IGRAPH_CHECK(igraph_matrix_init_copy(vectors, &new_vectors));
     igraph_matrix_destroy(&new_vectors);
     IGRAPH_FINALLY_CLEAN(1);
 
     return IGRAPH_SUCCESS;
+}
+
+/* ************************************************************************* */
+
+/* Helper functions to map ARPACK error codes to \c igraph_arpack_error_t    */
+
+static igraph_arpack_error_t igraph_i_arpack_err_dsaupd(int error) {
+    switch (error) {
+    case  0:      return IGRAPH_ARPACK_NO_ERROR;
+    case  1:      return IGRAPH_ARPACK_MAXIT;
+    case  3:      return IGRAPH_ARPACK_NOSHIFT;
+    case -1:      return IGRAPH_ARPACK_NPOS;
+    case -2:      return IGRAPH_ARPACK_NEVNPOS;
+    case -3:      return IGRAPH_ARPACK_NCVSMALL;
+    case -4:      return IGRAPH_ARPACK_NONPOSI;
+    case -5:      return IGRAPH_ARPACK_WHICHINV;
+    case -6:      return IGRAPH_ARPACK_BMATINV;
+    case -7:      return IGRAPH_ARPACK_WORKLSMALL;
+    case -8:      return IGRAPH_ARPACK_TRIDERR;
+    case -9:      return IGRAPH_ARPACK_ZEROSTART;
+    case -10:     return IGRAPH_ARPACK_MODEINV;
+    case -11:     return IGRAPH_ARPACK_MODEBMAT;
+    case -12:     return IGRAPH_ARPACK_ISHIFT;
+    case -13:     return IGRAPH_ARPACK_NEVBE;
+    case -9999:   return IGRAPH_ARPACK_NOFACT;
+    default:      return IGRAPH_ARPACK_UNKNOWN;
+    }
+}
+
+static igraph_arpack_error_t igraph_i_arpack_err_dseupd(int error) {
+    switch (error) {
+    case  0:      return IGRAPH_ARPACK_NO_ERROR;
+    case -1:      return IGRAPH_ARPACK_NPOS;
+    case -2:      return IGRAPH_ARPACK_NEVNPOS;
+    case -3:      return IGRAPH_ARPACK_NCVSMALL;
+    case -5:      return IGRAPH_ARPACK_WHICHINV;
+    case -6:      return IGRAPH_ARPACK_BMATINV;
+    case -7:      return IGRAPH_ARPACK_WORKLSMALL;
+    case -8:      return IGRAPH_ARPACK_TRIDERR;
+    case -9:      return IGRAPH_ARPACK_ZEROSTART;
+    case -10:     return IGRAPH_ARPACK_MODEINV;
+    case -11:     return IGRAPH_ARPACK_MODEBMAT;
+    case -12:     return IGRAPH_ARPACK_NEVBE;
+    case -14:     return IGRAPH_ARPACK_FAILED;
+    case -15:     return IGRAPH_ARPACK_HOWMNY;
+    case -16:     return IGRAPH_ARPACK_HOWMNYS;
+    case -17:     return IGRAPH_ARPACK_EVDIFF;
+    default:      return IGRAPH_ARPACK_UNKNOWN;
+    }
+
+}
+
+static igraph_arpack_error_t igraph_i_arpack_err_dnaupd(int error) {
+    switch (error) {
+    case  0:      return IGRAPH_ARPACK_NO_ERROR;
+    case  1:      return IGRAPH_ARPACK_MAXIT;
+    case  3:      return IGRAPH_ARPACK_NOSHIFT;
+    case -1:      return IGRAPH_ARPACK_NPOS;
+    case -2:      return IGRAPH_ARPACK_NEVNPOS;
+    case -3:      return IGRAPH_ARPACK_NCVSMALL;
+    case -4:      return IGRAPH_ARPACK_NONPOSI;
+    case -5:      return IGRAPH_ARPACK_WHICHINV;
+    case -6:      return IGRAPH_ARPACK_BMATINV;
+    case -7:      return IGRAPH_ARPACK_WORKLSMALL;
+    case -8:      return IGRAPH_ARPACK_TRIDERR;
+    case -9:      return IGRAPH_ARPACK_ZEROSTART;
+    case -10:     return IGRAPH_ARPACK_MODEINV;
+    case -11:     return IGRAPH_ARPACK_MODEBMAT;
+    case -12:     return IGRAPH_ARPACK_ISHIFT;
+    case -9999:   return IGRAPH_ARPACK_NOFACT;
+    default:      return IGRAPH_ARPACK_UNKNOWN;
+    }
+}
+
+static igraph_arpack_error_t igraph_i_arpack_err_dneupd(int error) {
+    switch (error) {
+    case  0:      return IGRAPH_ARPACK_NO_ERROR;
+    case  1:      return IGRAPH_ARPACK_REORDER;
+    case -1:      return IGRAPH_ARPACK_NPOS;
+    case -2:      return IGRAPH_ARPACK_NEVNPOS;
+    case -3:      return IGRAPH_ARPACK_NCVSMALL;
+    case -5:      return IGRAPH_ARPACK_WHICHINV;
+    case -6:      return IGRAPH_ARPACK_BMATINV;
+    case -7:      return IGRAPH_ARPACK_WORKLSMALL;
+    case -8:      return IGRAPH_ARPACK_SHUR;
+    case -9:      return IGRAPH_ARPACK_LAPACK;
+    case -10:     return IGRAPH_ARPACK_MODEINV;
+    case -11:     return IGRAPH_ARPACK_MODEBMAT;
+    case -12:     return IGRAPH_ARPACK_HOWMNYS;
+    case -13:     return IGRAPH_ARPACK_HOWMNY;
+    case -14:     return IGRAPH_ARPACK_FAILED;
+    case -15:     return IGRAPH_ARPACK_EVDIFF;
+    default:      return IGRAPH_ARPACK_UNKNOWN;
+    }
+}
+
+static const char* igraph_i_arpack_error_strings[] = {
+    /* 15 */ "Matrix-vector product failed",
+    /* 16 */ "N must be positive",
+    /* 17 */ "NEV must be positive",
+    /* 18 */ "NCV must be greater than NEV and less than or equal to N "
+    "(and for the non-symmetric solver NCV-NEV >=2 must also hold)",
+    /* 19 */ "Maximum number of iterations should be positive",
+    /* 20 */ "Invalid WHICH parameter",
+    /* 21 */ "Invalid BMAT parameter",
+    /* 22 */ "WORKL is too small",
+    /* 23 */ "LAPACK error in tridiagonal eigenvalue calculation",
+    /* 24 */ "Starting vector is zero",
+    /* 25 */ "MODE is invalid",
+    /* 26 */ "MODE and BMAT are not compatible",
+    /* 27 */ "ISHIFT must be 0 or 1",
+    /* 28 */ "NEV and WHICH='BE' are incompatible",
+    /* 29 */ "Could not build an Arnoldi factorization",
+    /* 30 */ "No eigenvalues to sufficient accuracy",
+    /* 31 */ "HOWMNY is invalid",
+    /* 32 */ "HOWMNY='S' is not implemented",
+    /* 33 */ "Different number of converged Ritz values",
+    /* 34 */ "Error from calculation of a real Schur form",
+    /* 35 */ "LAPACK (dtrevc) error for calculating eigenvectors",
+    /* 36 */ "Unknown ARPACK error",
+    /* 37 */ 0,
+    /* 38 */ 0,
+    /* 39 */ "Maximum number of iterations reached",
+    /* 40 */ "No shifts could be applied during a cycle of the "
+    "Implicitly restarted Arnoldi iteration. One possibility "
+    "is to increase the size of NCV relative to NEV",
+    /* 41 */ "The Schur form computed by LAPACK routine dlahqr "
+    "could not be reordered by LAPACK routine dtrsen."
+};
+
+/**
+ * \function igraph_arpack_error_to_string
+ * \brief Convert an ARPACK error code to a human-readable representation.
+ */
+const char* igraph_arpack_error_to_string(igraph_arpack_error_t error) {
+    if (error == IGRAPH_ARPACK_NO_ERROR) {
+        return "No error";
+    }
+
+    int index = (error >= IGRAPH_ARPACK_PROD)
+        ? error - IGRAPH_ARPACK_PROD
+        : -1;
+    const char* message = 0;
+
+    if (index >= 0 && index < sizeof(igraph_i_arpack_error_strings) / sizeof(igraph_i_arpack_error_strings[0])) {
+        message = igraph_i_arpack_error_strings[index];
+    }
+
+    return message ? message : "Unknown ARPACK error";
+}
+
+/**
+ * \function igraph_arpack_get_last_error
+ * \brief Returns the last error code returned from an ARPACK function.
+ */
+igraph_arpack_error_t igraph_arpack_get_last_error(void) {
+    return last_arpack_error;
 }

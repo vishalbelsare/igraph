@@ -53,8 +53,8 @@ add_library(
   arpack_vendored
   OBJECT
   EXCLUDE_FROM_ALL
-  dnaupd.c dnaup2.c dgetv0.c dvout.c second.c dmout.c dnaitr.c ivout.c dnapps.c
-  dnconv.c dneigh.c dlaqrb.c dngets.c dsortc.c dstatn.c dneupd.c dsaupd.c
+  dnaupd.c dnaup2.c dgetv0.c dvout.c arscnd.c dmout.c dnaitr.c ivout.c dnapps.c
+  dnconv.c dneigh.c dlaqrb.c dngets.c dsortc.c dneupd.c dsaupd.c
   dsaup2.c dsaitr.c dsapps.c dsconv.c dseigt.c dstqrb.c dsgets.c dsortr.c
   dstats.c dseupd.c dsesrt.c
   $<TARGET_OBJECTS:f2c_vendored>
@@ -72,9 +72,9 @@ endif()
 # mess around with the source of lapack too much to fix these
 if(NOT MSVC)
   target_compile_options(blas_vendored PRIVATE 
-    $<$<C_COMPILER_ID:GCC,Clang,AppleClang>:-Wno-logical-op-parentheses>
+    $<$<C_COMPILER_ID:GCC,Clang,AppleClang,IntelLLVM>:-Wno-logical-op-parentheses>
   )
   target_compile_options(lapack_vendored PRIVATE 
-    $<$<C_COMPILER_ID:GCC,Clang,AppleClang>:-Wno-logical-op-parentheses -Wno-shift-op-parentheses>
+    $<$<C_COMPILER_ID:GCC,Clang,AppleClang,IntelLLVM>:-Wno-logical-op-parentheses -Wno-shift-op-parentheses>
   )
 endif()

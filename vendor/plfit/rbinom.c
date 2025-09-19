@@ -41,15 +41,13 @@
  * modifications as well.
  */
 
-#include <limits.h>
 #include <math.h>
 #include <stdlib.h>
-#include "sampling.h"
-#include "platform.h"
+#include "plfit_sampling.h"
 
 #define repeat for(;;)
 
-double plfit_rbinom(double nin, double pp, mt_rng_t* rng)
+double plfit_rbinom(double nin, double pp, plfit_mt_rng_t* rng)
 {
     /* FIXME: These should become THREAD_specific globals : */
 
@@ -162,7 +160,7 @@ double plfit_rbinom(double nin, double pp, mt_rng_t* rng)
 	      goto finis;
       } else {
 	  /* squeezing using upper and lower bounds on log(f(x)) */
-	  amaxp = (k / npq) * ((k * (k / 3. + 0.625) + 0.1666666666666) / npq + 0.5);
+	  amaxp = (k / npq) * ((k * (k / 3. + 0.625) + (1.0 / 6.0)) / npq + 0.5);
 	  ynorm = -k * k / (2.0 * npq);
 	  alv = log(v);
 	  if (alv < ynorm - amaxp)
@@ -206,4 +204,3 @@ double plfit_rbinom(double nin, double pp, mt_rng_t* rng)
 	 ix = n - ix;
   return (double)ix;
 }
-

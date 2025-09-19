@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2006-2021  The igraph development team <igraph@igraph.org>
 
    This program is free software; you can redistribute it and/or modify
@@ -21,7 +20,7 @@
 #include <math.h>
 #include <float.h>
 
-#include "test_utilities.inc"
+#include "test_utilities.h"
 
 int is_almost_one(igraph_real_t x) {
     /* 2^5 = 32 is 5 binary digits  of tolerance */
@@ -32,13 +31,13 @@ int is_almost_one(igraph_real_t x) {
     return 1;
 }
 
-int main() {
+int main(void) {
 
     igraph_t g;
     igraph_vector_t res, reset, weights;
     igraph_arpack_options_t arpack_options;
     igraph_real_t value;
-    int err;
+    igraph_error_t err;
 
     /* The ARPACK method uses a random perturbation to the in-degrees
        to set the starting vector for ARPACK. */
@@ -54,13 +53,13 @@ int main() {
                  -1);
 
     igraph_vector_init(&res, 0);
-    igraph_pagerank(&g, IGRAPH_PAGERANK_ALGO_ARPACK, &res, &value,
-                    igraph_vss_all(), 0, 0.85, 0, &arpack_options);
+    igraph_pagerank(&g, 0, &res, &value, 0.85, 0,
+                    igraph_vss_all(), IGRAPH_PAGERANK_ALGO_ARPACK, &arpack_options);
     printf("ARPACK: "); print_vector(&res);
     IGRAPH_ASSERT(is_almost_one(value));
 
-    igraph_pagerank(&g, IGRAPH_PAGERANK_ALGO_PRPACK, &res, &value,
-                    igraph_vss_all(), 0, 0.85, 0, 0);
+    igraph_pagerank(&g, 0, &res, &value, 0.85, 0,
+                    igraph_vss_all(), IGRAPH_PAGERANK_ALGO_PRPACK, 0);
     printf("PRPACK: "); print_vector(&res);
     IGRAPH_ASSERT(is_almost_one(value));
 
@@ -76,13 +75,13 @@ int main() {
                  -1);
 
     igraph_vector_init(&res, 0);
-    igraph_pagerank(&g, IGRAPH_PAGERANK_ALGO_ARPACK, &res, &value,
-                    igraph_vss_all(), 0, 0.85, 0, &arpack_options);
+    igraph_pagerank(&g, 0, &res, &value, 0.85, 0,
+                    igraph_vss_all(), IGRAPH_PAGERANK_ALGO_ARPACK, &arpack_options);
     printf("ARPACK: "); print_vector(&res);
     IGRAPH_ASSERT(is_almost_one(value));
 
-    igraph_pagerank(&g, IGRAPH_PAGERANK_ALGO_PRPACK, &res, &value,
-                    igraph_vss_all(), 0, 0.85, 0, 0);
+    igraph_pagerank(&g, 0, &res, &value, 0.85, 0,
+                    igraph_vss_all(), IGRAPH_PAGERANK_ALGO_PRPACK, 0);
     printf("PRPACK: "); print_vector(&res);
     IGRAPH_ASSERT(is_almost_one(value));
 
@@ -95,34 +94,35 @@ int main() {
 
     igraph_star(&g, 11, IGRAPH_STAR_UNDIRECTED, 0);
     igraph_vector_init(&res, 0);
-    igraph_pagerank(&g, IGRAPH_PAGERANK_ALGO_ARPACK, &res, &value,
-                    igraph_vss_all(), 0, 0.85, 0, &arpack_options);
+    igraph_pagerank(&g, 0, &res, &value, 0.85, 0,
+                    igraph_vss_all(), IGRAPH_PAGERANK_ALGO_ARPACK, &arpack_options);
     printf("ARPACK: "); print_vector(&res);
     IGRAPH_ASSERT(is_almost_one(value));
 
-    igraph_pagerank(&g, IGRAPH_PAGERANK_ALGO_PRPACK, &res, &value,
-                    igraph_vss_all(), 0, 0.85, 0, 0);
+    igraph_pagerank(&g, 0, &res, &value, 0.85, 0,
+                    igraph_vss_all(), IGRAPH_PAGERANK_ALGO_PRPACK, 0);
     printf("PRPACK: "); print_vector(&res);
     IGRAPH_ASSERT(is_almost_one(value));
 
-    /* Check twice more for consistency */
-    igraph_pagerank(&g, IGRAPH_PAGERANK_ALGO_ARPACK, &res, &value,
-                    igraph_vss_all(), 0, 0.85, 0, &arpack_options);
+    /* Check twice more for consistency, this time without explicitly
+     * supplied ARPACK options */
+    igraph_pagerank(&g, 0, &res, &value, 0.85, 0,
+                    igraph_vss_all(), IGRAPH_PAGERANK_ALGO_ARPACK, 0);
     printf("ARPACK: "); print_vector(&res);
     IGRAPH_ASSERT(is_almost_one(value));
 
-    igraph_pagerank(&g, IGRAPH_PAGERANK_ALGO_PRPACK, &res, &value,
-                    igraph_vss_all(), 0, 0.85, 0, 0);
+    igraph_pagerank(&g, 0, &res, &value, 0.85, 0,
+                    igraph_vss_all(), IGRAPH_PAGERANK_ALGO_PRPACK, 0);
     printf("PRPACK: "); print_vector(&res);
     IGRAPH_ASSERT(is_almost_one(value));
 
-    igraph_pagerank(&g, IGRAPH_PAGERANK_ALGO_ARPACK, &res, &value,
-                    igraph_vss_all(), 0, 0.85, 0, &arpack_options);
+    igraph_pagerank(&g, 0, &res, &value, 0.85, 0,
+                    igraph_vss_all(), IGRAPH_PAGERANK_ALGO_ARPACK, 0);
     printf("ARPACK: "); print_vector(&res);
     IGRAPH_ASSERT(is_almost_one(value));
 
-    igraph_pagerank(&g, IGRAPH_PAGERANK_ALGO_PRPACK, &res, &value,
-                    igraph_vss_all(), 0, 0.85, 0, 0);
+    igraph_pagerank(&g, 0, &res, &value, 0.85, 0,
+                    igraph_vss_all(), IGRAPH_PAGERANK_ALGO_PRPACK, 0);
     printf("PRPACK: "); print_vector(&res);
     IGRAPH_ASSERT(is_almost_one(value));
 
@@ -130,15 +130,15 @@ int main() {
 
     printf("\nPersonalized PageRank\n");
 
-    igraph_personalized_pagerank_vs(&g, IGRAPH_PAGERANK_ALGO_ARPACK, &res, &value,
-                                    igraph_vss_all(), 0, 0.5,
-                                    igraph_vss_1(1), 0, &arpack_options);
+    igraph_personalized_pagerank_vs(&g, 0, &res, &value,
+                                    igraph_vss_1(1), 0.5, 0,
+                                    igraph_vss_all(), IGRAPH_PAGERANK_ALGO_ARPACK, &arpack_options);
     printf("ARPACK: "); print_vector(&res);
     IGRAPH_ASSERT(is_almost_one(value));
 
-    igraph_personalized_pagerank_vs(&g, IGRAPH_PAGERANK_ALGO_PRPACK, &res, &value,
-                                    igraph_vss_all(), 0, 0.5,
-                                    igraph_vss_1(1), 0, 0);
+    igraph_personalized_pagerank_vs(&g, 0, &res, &value,
+                                    igraph_vss_1(1), 0.5, 0,
+                                    igraph_vss_all(), IGRAPH_PAGERANK_ALGO_PRPACK, 0);
     printf("PRPACK: "); print_vector(&res);
     IGRAPH_ASSERT(is_almost_one(value));
 
@@ -147,25 +147,25 @@ int main() {
 
     igraph_set_error_handler(igraph_error_handler_ignore);
     igraph_vector_init(&reset, 2);
-    err = igraph_personalized_pagerank(&g, IGRAPH_PAGERANK_ALGO_ARPACK, &res, 0,
-                                       igraph_vss_all(), 0, 0.85, &reset, 0,
+    err = igraph_personalized_pagerank(&g, 0, &res, 0, &reset, 0.85, 0,
+                                       igraph_vss_all(), IGRAPH_PAGERANK_ALGO_ARPACK,
                                        &arpack_options);
     IGRAPH_ASSERT(err == IGRAPH_EINVAL);
 
-    err = igraph_personalized_pagerank(&g, IGRAPH_PAGERANK_ALGO_PRPACK, &res, 0,
-                                       igraph_vss_all(), 0, 0.85, &reset, 0, 0);
+    err = igraph_personalized_pagerank(&g, 0, &res, 0, &reset, 0.85, 0,
+                                       igraph_vss_all(), IGRAPH_PAGERANK_ALGO_PRPACK, 0);
     IGRAPH_ASSERT(err == IGRAPH_EINVAL);
 
     igraph_vector_resize(&reset, 10);
     igraph_vector_fill(&reset, 0);
-    err = igraph_personalized_pagerank(&g, IGRAPH_PAGERANK_ALGO_ARPACK,
-                                       &res, 0, igraph_vss_all(), 0, 0.85,
-                                       &reset, 0, &arpack_options);
+    err = igraph_personalized_pagerank(&g, 0,
+                                       &res, 0,
+                                       &reset, 0.85, 0, igraph_vss_all(), IGRAPH_PAGERANK_ALGO_ARPACK, &arpack_options);
     IGRAPH_ASSERT(err == IGRAPH_EINVAL);
 
-    err = igraph_personalized_pagerank(&g, IGRAPH_PAGERANK_ALGO_PRPACK,
-                                       &res, 0, igraph_vss_all(), 0, 0.85,
-                                       &reset, 0, 0);
+    err = igraph_personalized_pagerank(&g, 0,
+                                       &res, 0,
+                                       &reset, 0.85, 0, igraph_vss_all(), IGRAPH_PAGERANK_ALGO_PRPACK, 0);
     IGRAPH_ASSERT(err == IGRAPH_EINVAL);
 
     igraph_vector_destroy(&reset);
@@ -179,13 +179,13 @@ int main() {
     printf("\nEdgeless graph\n");
 
     igraph_empty(&g, 10, IGRAPH_UNDIRECTED);
-    igraph_pagerank(&g, IGRAPH_PAGERANK_ALGO_ARPACK, &res, &value,
-                    igraph_vss_all(), 1, 0.85, 0, &arpack_options);
+    igraph_pagerank(&g, 0, &res, &value, 0.85, 1,
+                    igraph_vss_all(), IGRAPH_PAGERANK_ALGO_ARPACK, &arpack_options);
     printf("ARPACK: "); print_vector(&res);
     IGRAPH_ASSERT(is_almost_one(value));
 
-    igraph_pagerank(&g, IGRAPH_PAGERANK_ALGO_PRPACK, &res, &value,
-                    igraph_vss_all(), 1, 0.85, 0, 0);
+    igraph_pagerank(&g, 0, &res, &value, 0.85, 1,
+                    igraph_vss_all(), IGRAPH_PAGERANK_ALGO_PRPACK, 0);
     printf("PRPACK: "); print_vector(&res);
     IGRAPH_ASSERT(is_almost_one(value));
 
@@ -197,15 +197,15 @@ int main() {
     printf("\nEdgeless graph, personalized PageRank\n");
 
     igraph_empty(&g, 4, IGRAPH_UNDIRECTED);
-    igraph_vector_init_seq(&reset, 1, 4);
+    igraph_vector_init_range(&reset, 1, 5);
 
-    igraph_personalized_pagerank(&g, IGRAPH_PAGERANK_ALGO_ARPACK, &res, &value,
-                    igraph_vss_all(), 1, 0.85, &reset, 0, &arpack_options);
+    igraph_personalized_pagerank(&g, 0, &res, &value, &reset, 0.85, 1,
+                                 igraph_vss_all(), IGRAPH_PAGERANK_ALGO_ARPACK, &arpack_options);
     printf("ARPACK: "); print_vector(&res);
     IGRAPH_ASSERT(is_almost_one(value));
 
-    igraph_personalized_pagerank(&g, IGRAPH_PAGERANK_ALGO_PRPACK, &res, &value,
-                    igraph_vss_all(), 1, 0.85, &reset, 0, 0);
+    igraph_personalized_pagerank(&g, 0, &res, &value, &reset, 0.85, 1,
+                                 igraph_vss_all(), IGRAPH_PAGERANK_ALGO_PRPACK, 0);
     printf("PRPACK: "); print_vector(&res);
     IGRAPH_ASSERT(is_almost_one(value));
 
@@ -216,13 +216,13 @@ int main() {
     printf("\nOne edge, two isolated vertices, personalized\n");
     igraph_add_edge(&g, 0, 1);
 
-    igraph_personalized_pagerank(&g, IGRAPH_PAGERANK_ALGO_ARPACK, &res, &value,
-                    igraph_vss_all(), 1, 0.85, &reset, 0, &arpack_options);
+    igraph_personalized_pagerank(&g, 0, &res, &value, &reset, 0.85, 1,
+                                 igraph_vss_all(), IGRAPH_PAGERANK_ALGO_ARPACK, &arpack_options);
     printf("ARPACK: "); print_vector(&res);
     IGRAPH_ASSERT(is_almost_one(value));
 
-    igraph_personalized_pagerank(&g, IGRAPH_PAGERANK_ALGO_PRPACK, &res, &value,
-                    igraph_vss_all(), 1, 0.85, &reset, 0, 0);
+    igraph_personalized_pagerank(&g, 0, &res, &value, &reset, 0.85, 1,
+                                 igraph_vss_all(), IGRAPH_PAGERANK_ALGO_PRPACK, 0);
     printf("PRPACK: "); print_vector(&res);
     IGRAPH_ASSERT(is_almost_one(value));
 
@@ -237,13 +237,13 @@ int main() {
     igraph_full(&g, 10, IGRAPH_UNDIRECTED, IGRAPH_NO_LOOPS);
     igraph_vector_init(&weights, 45);
     igraph_vector_fill(&weights, 0);
-    igraph_pagerank(&g, IGRAPH_PAGERANK_ALGO_ARPACK, &res, &value,
-                    igraph_vss_all(), 1, 0.85, &weights, &arpack_options);
+    igraph_pagerank(&g, &weights, &res, &value, 0.85, 1,
+                    igraph_vss_all(), IGRAPH_PAGERANK_ALGO_ARPACK, &arpack_options);
     printf("ARPACK: "); print_vector(&res);
     IGRAPH_ASSERT(is_almost_one(value));
 
-    igraph_pagerank(&g, IGRAPH_PAGERANK_ALGO_PRPACK, &res, &value,
-                    igraph_vss_all(), 1, 0.85, &weights, 0);
+    igraph_pagerank(&g, &weights, &res, &value, 0.85, 1,
+                    igraph_vss_all(), IGRAPH_PAGERANK_ALGO_PRPACK, 0);
     printf("PRPACK: "); print_vector(&res);
     IGRAPH_ASSERT(is_almost_one(value));
 
@@ -265,13 +265,13 @@ int main() {
     VECTOR(weights)[6] = 3;
     VECTOR(weights)[7] = 4;
     VECTOR(weights)[8] = 4;
-    igraph_pagerank(&g, IGRAPH_PAGERANK_ALGO_ARPACK, &res, &value,
-                    igraph_vss_all(), 1, 0.85, &weights, &arpack_options);
+    igraph_pagerank(&g, &weights, &res, &value, 0.85, 1,
+                    igraph_vss_all(), IGRAPH_PAGERANK_ALGO_ARPACK, &arpack_options);
     printf("ARPACK: "); print_vector(&res);
     IGRAPH_ASSERT(is_almost_one(value));
 
-    igraph_pagerank(&g, IGRAPH_PAGERANK_ALGO_PRPACK, &res, &value,
-                    igraph_vss_all(), 1, 0.85, &weights, 0);
+    igraph_pagerank(&g, &weights, &res, &value, 0.85, 1,
+                    igraph_vss_all(), IGRAPH_PAGERANK_ALGO_PRPACK, 0);
     printf("PRPACK: "); print_vector(&res);
     IGRAPH_ASSERT(is_almost_one(value));
 
@@ -286,13 +286,13 @@ int main() {
                  0,1, 1,2, 1,2,
                  -1);
 
-    igraph_pagerank(&g, IGRAPH_PAGERANK_ALGO_ARPACK, &res, &value,
-                    igraph_vss_all(), 1, 0.85, NULL, &arpack_options);
+    igraph_pagerank(&g, NULL, &res, &value, 0.85, 1,
+                    igraph_vss_all(), IGRAPH_PAGERANK_ALGO_ARPACK, &arpack_options);
     printf("ARPACK: "); print_vector(&res);
     IGRAPH_ASSERT(is_almost_one(value));
 
-    igraph_pagerank(&g, IGRAPH_PAGERANK_ALGO_PRPACK, &res, &value,
-                    igraph_vss_all(), 1, 0.85, NULL, 0);
+    igraph_pagerank(&g, NULL, &res, &value, 0.85, 1,
+                    igraph_vss_all(), IGRAPH_PAGERANK_ALGO_PRPACK, 0);
     printf("PRPACK: "); print_vector(&res);
     IGRAPH_ASSERT(is_almost_one(value));
 
@@ -301,13 +301,13 @@ int main() {
     igraph_vector_init(&weights, 3);
     igraph_vector_fill(&weights, 1.0);
 
-    igraph_pagerank(&g, IGRAPH_PAGERANK_ALGO_ARPACK, &res, &value,
-                    igraph_vss_all(), 1, 0.85, &weights, &arpack_options);
+    igraph_pagerank(&g, &weights, &res, &value, 0.85, 1,
+                    igraph_vss_all(), IGRAPH_PAGERANK_ALGO_ARPACK, &arpack_options);
     printf("ARPACK: "); print_vector(&res);
     IGRAPH_ASSERT(is_almost_one(value));
 
-    igraph_pagerank(&g, IGRAPH_PAGERANK_ALGO_PRPACK, &res, &value,
-                    igraph_vss_all(), 1, 0.85, &weights, 0);
+    igraph_pagerank(&g, &weights, &res, &value, 0.85, 1,
+                    igraph_vss_all(), IGRAPH_PAGERANK_ALGO_PRPACK, 0);
     printf("PRPACK: "); print_vector(&res);
     IGRAPH_ASSERT(is_almost_one(value));
 
@@ -319,10 +319,10 @@ int main() {
     /* Graph with more than 127 vertices. PRPACK uses a different method above this size. */
 
     {
-        igraph_vector_t edges_to_delete;
+        igraph_vector_int_t edges_to_delete;
         igraph_vector_t res_arpack, res_prpack;
         igraph_vector_t weights;
-        long int i, n;
+        igraph_int_t i, n;
 
         printf("\nLarge test graph, unweighted\n");
 
@@ -331,21 +331,21 @@ int main() {
 
         /* We delete some edges to break the symmetry of the graph.
          * Otherwise all vertices would have the same PageRank. */
-        igraph_vector_init_seq(&edges_to_delete, 0, 37);
+        igraph_vector_int_init_range(&edges_to_delete, 0, 38);
         igraph_delete_edges(&g, igraph_ess_vector(&edges_to_delete));
-        igraph_vector_destroy(&edges_to_delete);
+        igraph_vector_int_destroy(&edges_to_delete);
 
         /* Note: This test graph is not connected and has self-loops. */
 
         igraph_vector_init(&res_arpack, 0);
         igraph_vector_init(&res_prpack, 0);
 
-        igraph_pagerank(&g, IGRAPH_PAGERANK_ALGO_ARPACK, &res_arpack, &value,
-                        igraph_vss_all(), 1, 0.85, NULL, &arpack_options);
+        igraph_pagerank(&g, NULL, &res_arpack, &value, 0.85, 1,
+                        igraph_vss_all(), IGRAPH_PAGERANK_ALGO_ARPACK, &arpack_options);
         IGRAPH_ASSERT(is_almost_one(value));
 
-        igraph_pagerank(&g, IGRAPH_PAGERANK_ALGO_PRPACK, &res_prpack, &value,
-                        igraph_vss_all(), 1, 0.85, NULL, NULL);
+        igraph_pagerank(&g, NULL, &res_prpack, &value, 0.85, 1,
+                        igraph_vss_all(), IGRAPH_PAGERANK_ALGO_PRPACK, NULL);
         IGRAPH_ASSERT(is_almost_one(value));
 
         n = igraph_vector_size(&res_arpack);
@@ -353,7 +353,7 @@ int main() {
             igraph_real_t ar = VECTOR(res_arpack)[i];
             igraph_real_t pr = VECTOR(res_prpack)[i];
             if (fabs(ar - pr) > 1e-12) {
-                printf("Unexpected difference between ARPACK and PRPACK results for vertex %ld:\n"
+                printf("Unexpected difference between ARPACK and PRPACK results for vertex %" IGRAPH_PRId ":\n"
                        "ARPACK: %g\n"
                        "PRPACK: %g\n"
                        "Difference: %g\n",
@@ -363,14 +363,14 @@ int main() {
 
         printf("\nLarge test graph, weighted\n");
 
-        igraph_vector_init_seq(&weights, igraph_ecount(&g) + 1, 2*igraph_ecount(&g));
+        igraph_vector_init_range(&weights, igraph_ecount(&g) + 1, 2*igraph_ecount(&g) + 1);
 
-        igraph_pagerank(&g, IGRAPH_PAGERANK_ALGO_ARPACK, &res_arpack, &value,
-                        igraph_vss_all(), 1, 0.85, &weights, &arpack_options);
+        igraph_pagerank(&g, &weights, &res_arpack, &value, 0.85, 1,
+                        igraph_vss_all(), IGRAPH_PAGERANK_ALGO_ARPACK, &arpack_options);
         IGRAPH_ASSERT(is_almost_one(value));
 
-        igraph_pagerank(&g, IGRAPH_PAGERANK_ALGO_PRPACK, &res_prpack, &value,
-                        igraph_vss_all(), 1, 0.85, &weights, NULL);
+        igraph_pagerank(&g, &weights, &res_prpack, &value, 0.85, 1,
+                        igraph_vss_all(), IGRAPH_PAGERANK_ALGO_PRPACK, NULL);
         IGRAPH_ASSERT(is_almost_one(value));
 
         n = igraph_vector_size(&res_arpack);
@@ -378,7 +378,7 @@ int main() {
             igraph_real_t ar = VECTOR(res_arpack)[i];
             igraph_real_t pr = VECTOR(res_prpack)[i];
             if (fabs(ar - pr) > 1e-12) {
-                printf("Unexpected difference between ARPACK and PRPACK results for vertex %ld:\n"
+                printf("Unexpected difference between ARPACK and PRPACK results for vertex %" IGRAPH_PRId ":\n"
                        "ARPACK: %g\n"
                        "PRPACK: %g\n"
                        "Difference: %g\n",

@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2007-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard street, Cambridge, MA 02139 USA
 
@@ -21,8 +20,8 @@
 
 */
 
-#ifndef IGRAPH_PRPACK
-#define IGRAPH_PRPACK
+#ifndef IGRAPH_PRPACK_H
+#define IGRAPH_PRPACK_H
 
 #include "igraph_decls.h"
 #include "igraph_types.h"
@@ -31,14 +30,14 @@
 
 #include "igraph_interface.h"
 
-__BEGIN_DECLS
+IGRAPH_BEGIN_C_DECLS
 
-int igraph_i_personalized_pagerank_prpack(const igraph_t *graph, igraph_vector_t *vector,
+igraph_error_t igraph_i_personalized_pagerank_prpack(const igraph_t *graph, igraph_vector_t *vector,
                                           igraph_real_t *value, const igraph_vs_t vids,
                                           igraph_bool_t directed, igraph_real_t damping,
                                           const igraph_vector_t *reset,
                                           const igraph_vector_t *weights);
 
-__END_DECLS
+IGRAPH_END_C_DECLS
 
 #endif

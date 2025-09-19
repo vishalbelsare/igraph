@@ -1,7 +1,5 @@
-/* -*- mode: C -*-  */
-/* vim:set ts=4 sw=4 sts=4 et: */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2003-2020  The igraph development team
 
    This program is free software; you can redistribute it and/or modify
@@ -41,14 +39,14 @@
  *
  * Time complexity: O(|V|), the number of vertices.
  */
-int igraph_layout_grid(const igraph_t *graph, igraph_matrix_t *res, long int width) {
-    long int i, no_of_nodes = igraph_vcount(graph);
+igraph_error_t igraph_layout_grid(const igraph_t *graph, igraph_matrix_t *res, igraph_int_t width) {
+    igraph_int_t i, no_of_nodes = igraph_vcount(graph);
     igraph_real_t x, y;
 
     IGRAPH_CHECK(igraph_matrix_resize(res, no_of_nodes, 2));
 
     if (width <= 0) {
-        width = (long int) ceil(sqrt(no_of_nodes));
+        width = ceil(sqrt(no_of_nodes));
     }
 
     x = y = 0;
@@ -60,7 +58,7 @@ int igraph_layout_grid(const igraph_t *graph, igraph_matrix_t *res, long int wid
         }
     }
 
-    return 0;
+    return IGRAPH_SUCCESS;
 }
 
 /**
@@ -81,19 +79,19 @@ int igraph_layout_grid(const igraph_t *graph, igraph_matrix_t *res, long int wid
  *
  * Time complexity: O(|V|), the number of vertices.
  */
-int igraph_layout_grid_3d(const igraph_t *graph, igraph_matrix_t *res,
-                          long int width, long int height) {
-    long int i, no_of_nodes = igraph_vcount(graph);
+igraph_error_t igraph_layout_grid_3d(const igraph_t *graph, igraph_matrix_t *res,
+                          igraph_int_t width, igraph_int_t height) {
+    igraph_int_t i, no_of_nodes = igraph_vcount(graph);
     igraph_real_t x, y, z;
 
     IGRAPH_CHECK(igraph_matrix_resize(res, no_of_nodes, 3));
 
     if (width <= 0 && height <= 0) {
-        width = height = (long int) ceil(pow(no_of_nodes, 1.0 / 3));
+        width = height = ceil(pow(no_of_nodes, 1.0 / 3));
     } else if (width <= 0) {
-        width = (long int) ceil(sqrt(no_of_nodes / (double)height));
+        width = ceil(sqrt(no_of_nodes / (double)height));
     } else if (height <= 0) {
-        height = (long int) ceil(sqrt(no_of_nodes / (double)width));
+        height = ceil(sqrt(no_of_nodes / (double)width));
     }
 
     x = y = z = 0;
@@ -109,5 +107,5 @@ int igraph_layout_grid_3d(const igraph_t *graph, igraph_matrix_t *res,
         }
     }
 
-    return 0;
+    return IGRAPH_SUCCESS;
 }

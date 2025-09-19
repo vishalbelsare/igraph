@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2010-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard st, Cambridge MA, 02139 USA
 
@@ -26,21 +25,23 @@
 #define DIM1 10
 #define DIM2 5
 
-#define INT(a) (igraph_rng_get_integer(igraph_rng_default(), 0, (a)))
+#define RANDINT(a) (igraph_rng_get_integer(igraph_rng_default(), 0, (a)))
 
-int main() {
+int main(void) {
     igraph_matrix_t mat;
     igraph_sparsemat_t spmat, spmat2;
-    int i;
     igraph_real_t m1, m2;
+
+    /* Initialize the library. */
+    igraph_setup();
 
     igraph_rng_seed(igraph_rng_default(), 42);
 
     igraph_sparsemat_init(&spmat, DIM1, DIM2, 20);
     igraph_sparsemat_entry(&spmat, 1, 2, -1.0);
     igraph_sparsemat_entry(&spmat, 3, 2, 10.0);
-    for (i = 0; i < 10; i++) {
-        igraph_sparsemat_entry(&spmat, INT(DIM1 - 1), INT(DIM2 - 1), 1.0);
+    for (int i = 0; i < 10; i++) {
+        igraph_sparsemat_entry(&spmat, RANDINT(DIM1 - 1), RANDINT(DIM2 - 1), 1.0);
     }
     igraph_sparsemat_entry(&spmat, 1, 2, -1.0);
     igraph_sparsemat_entry(&spmat, 3, 2, 10.0);

@@ -1,8 +1,6 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
-   Copyright (C) 2009-2012  Gabor Csardi <csardi.gabor@gmail.com>
-   334 Harvard street, Cambridge, MA 02139 USA
+   igraph library.
+   Copyright (C) 2009-2025  The igraph development team <igraph@igraph.org>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -15,19 +13,17 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc.,  51 Franklin Street, Fifth Floor, Boston, MA
-   02110-1301 USA
-
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #ifndef IGRAPH_DQUEUE_H
 #define IGRAPH_DQUEUE_H
 
 #include "igraph_decls.h"
+#include "igraph_error.h"
 #include "igraph_types.h"
 
-__BEGIN_DECLS
+IGRAPH_BEGIN_C_DECLS
 
 /* -------------------------------------------------- */
 /* double ended queue, very useful                    */
@@ -38,12 +34,6 @@ __BEGIN_DECLS
 #include "igraph_dqueue_pmt.h"
 #include "igraph_pmt_off.h"
 #undef BASE_IGRAPH_REAL
-
-#define BASE_LONG
-#include "igraph_pmt.h"
-#include "igraph_dqueue_pmt.h"
-#include "igraph_pmt_off.h"
-#undef BASE_LONG
 
 #define BASE_CHAR
 #include "igraph_pmt.h"
@@ -64,10 +54,13 @@ __BEGIN_DECLS
 #undef BASE_INT
 
 #define IGRAPH_DQUEUE_NULL { 0,0,0,0 }
-#define IGRAPH_DQUEUE_INIT_FINALLY(v, size) \
-    do { IGRAPH_CHECK(igraph_dqueue_init(v, size)); \
-        IGRAPH_FINALLY(igraph_dqueue_destroy, v); } while (0)
+#define IGRAPH_DQUEUE_INIT_FINALLY(q, capacity) \
+    do { IGRAPH_CHECK(igraph_dqueue_init(q, capacity)); \
+        IGRAPH_FINALLY(igraph_dqueue_destroy, q); } while (0)
+#define IGRAPH_DQUEUE_INT_INIT_FINALLY(q, capacity) \
+    do { IGRAPH_CHECK(igraph_dqueue_int_init(q, capacity)); \
+        IGRAPH_FINALLY(igraph_dqueue_int_destroy, q); } while (0)
 
-__END_DECLS
+IGRAPH_END_C_DECLS
 
 #endif

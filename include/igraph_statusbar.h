@@ -1,8 +1,6 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
-   Copyright (C) 2010-2012  Gabor Csardi <csardi.gabor@gmail.com>
-   334 Harvard street, Cambridge, MA 02139 USA
+   igraph library.
+   Copyright (C) 2010-2025  The igraph development team <igraph@igraph.org>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -15,18 +13,16 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
-   02110-1301 USA
-
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #ifndef IGRAPH_STATUSBAR_H
 #define IGRAPH_STATUSBAR_H
 
 #include "igraph_decls.h"
+#include "igraph_error.h"
 
-__BEGIN_DECLS
+IGRAPH_BEGIN_C_DECLS
 
 /**
  * \section about_status_handlers Status reporting
@@ -41,7 +37,7 @@ __BEGIN_DECLS
  *
  * <para>
  * Status handler functions must be of type \ref igraph_status_handler_t
- * and they can be install by a call to \ref igraph_set_status_handler().
+ * and they can be installed by a call to \ref igraph_set_status_handler().
  * Currently there is a simple predefined status handler function,
  * called \ref igraph_status_handler_stderr(), but the user can define
  * new ones.
@@ -60,15 +56,17 @@ __BEGIN_DECLS
  * \param message The status message.
  * \param data Additional context, with user-defined semantics.
  *        Existing igraph functions pass a null pointer here.
+ * \return Error code. The current calculation will abort if you return anything
+ *         else than \c IGRAPH_SUCCESS here.
  */
 
-typedef int igraph_status_handler_t(const char *message, void *data);
+typedef igraph_error_t igraph_status_handler_t(const char *message, void *data);
 
 IGRAPH_EXPORT extern igraph_status_handler_t igraph_status_handler_stderr;
 
-IGRAPH_EXPORT igraph_status_handler_t * igraph_set_status_handler(igraph_status_handler_t new_handler);
+IGRAPH_EXPORT igraph_status_handler_t *igraph_set_status_handler(igraph_status_handler_t new_handler);
 
-IGRAPH_EXPORT int igraph_status(const char *message, void *data);
+IGRAPH_EXPORT igraph_error_t igraph_status(const char *message, void *data);
 
 /**
  * \define IGRAPH_STATUS
@@ -83,19 +81,16 @@ IGRAPH_EXPORT int igraph_status(const char *message, void *data);
  *        Existing igraph functions pass a null pointer here.
  * \return If the status handler returns with a value other than
  *        \c IGRAPH_SUCCESS, then the function that called this
- *        macro returns as well, with error code
- *        \c IGRAPH_INTERRUPTED.
+ *        macro returns as well, with the same error code, after
+ *        cleaning up all allocated memory as needed.
  */
 
 #define IGRAPH_STATUS(message, data) \
     do { \
-        if (igraph_status((message), (data)) != IGRAPH_SUCCESS) { \
-            IGRAPH_FINALLY_FREE(); \
-            return IGRAPH_INTERRUPTED; \
-        } \
+        IGRAPH_CHECK(igraph_status((message), (data))); \
     } while (0)
 
-IGRAPH_EXPORT int igraph_statusf(const char *message, void *data, ...);
+IGRAPH_EXPORT igraph_error_t igraph_statusf(const char *message, void *data, ...);
 
 /**
  * \define IGRAPH_STATUSF
@@ -104,23 +99,21 @@ IGRAPH_EXPORT int igraph_statusf(const char *message, void *data, ...);
  * This is the more flexible version of \ref IGRAPH_STATUS(),
  * having a printf-like syntax. As this macro takes variable
  * number of arguments, they must be all supplied as a single
- * argument, enclosed in parentheses. Then \ref igraph_statusf()
- * is called with the given arguments.
+ * argument, enclosed in parentheses. \ref igraph_statusf() is then
+ * called with the given arguments.
+ *
  * \param args The arguments to pass to \ref igraph_statusf().
  * \return If the status handler returns with a value other than
  *        \c IGRAPH_SUCCESS, then the function that called this
- *        macro returns as well, with error code
- *        \c IGRAPH_INTERRUPTED.
+ *        macro returns as well, with the same error code, after
+ *        cleaning up all allocated memory as needed.
  */
 
 #define IGRAPH_STATUSF(args) \
     do { \
-        if (igraph_statusf args != IGRAPH_SUCCESS) { \
-            IGRAPH_FINALLY_FREE(); \
-            return IGRAPH_INTERRUPTED; \
-        } \
+        IGRAPH_CHECK(igraph_statusf args); \
     } while (0)
 
-__END_DECLS
+IGRAPH_END_C_DECLS
 
 #endif

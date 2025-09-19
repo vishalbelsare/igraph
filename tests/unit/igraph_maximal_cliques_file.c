@@ -1,5 +1,5 @@
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2021  The igraph development team <igraph@igraph.org>
 
    This program is free software; you can redistribute it and/or modify
@@ -17,25 +17,25 @@
 */
 
 #include <igraph.h>
-#include "test_utilities.inc"
+#include "test_utilities.h"
 
-int main() {
+int main(void) {
     igraph_t g_empty, g_lm;
 
     igraph_small(&g_empty, 0, 0, -1);
     igraph_small(&g_lm, 6, 1, 0,1, 0,2, 1,1, 1,2, 1,3, 2,0, 2,3, 3,4, 3,4, -1);
 
     printf("No vertices:\n");
-    IGRAPH_ASSERT(igraph_maximal_cliques_file(&g_empty, stdout, /*min*/ 0, /*max*/ 0) == IGRAPH_SUCCESS);
+    IGRAPH_ASSERT(igraph_maximal_cliques_file(&g_empty, stdout, /*min*/ 0, /*max*/ 0, IGRAPH_UNLIMITED) == IGRAPH_SUCCESS);
 
     printf("\nGraph with loops and multiple edges:\n");
-    IGRAPH_ASSERT(igraph_maximal_cliques_file(&g_lm, stdout, /*min*/ 0, /*max*/ 0) == IGRAPH_SUCCESS);
+    IGRAPH_ASSERT(igraph_maximal_cliques_file(&g_lm, stdout, /*min*/ 0, /*max*/ 0, IGRAPH_UNLIMITED) == IGRAPH_SUCCESS);
 
     printf("\nGraph with loops and multiple edges, minimum clique size 10:\n");
-    IGRAPH_ASSERT(igraph_maximal_cliques_file(&g_lm, stdout, /*min*/ 10, /*max*/ 0) == IGRAPH_SUCCESS);
+    IGRAPH_ASSERT(igraph_maximal_cliques_file(&g_lm, stdout, /*min*/ 10, /*max*/ 0, IGRAPH_UNLIMITED) == IGRAPH_SUCCESS);
 
     printf("\nGraph with loops and multiple edges, maximum clique size 2:\n");
-    IGRAPH_ASSERT(igraph_maximal_cliques_file(&g_lm, stdout, /*min*/ 0, /*max*/ 2) == IGRAPH_SUCCESS);
+    IGRAPH_ASSERT(igraph_maximal_cliques_file(&g_lm, stdout, /*min*/ 0, /*max*/ 2, IGRAPH_UNLIMITED) == IGRAPH_SUCCESS);
 
     igraph_destroy(&g_empty);
     igraph_destroy(&g_lm);

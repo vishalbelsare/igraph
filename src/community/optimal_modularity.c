@@ -1,7 +1,5 @@
-/* -*- mode: C -*-  */
-/* vim:set ts=4 sw=4 sts=4 et: */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2010-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard street, Cambridge, MA 02139 USA
 
@@ -30,44 +28,48 @@
 
 #include "core/interruption.h"
 #include "internal/glpk_support.h"
+#include "math/safe_intop.h"
 
-#include "config.h"
-
-#ifdef HAVE_GLPK
-    #include <glpk.h>
-#endif
+#include <limits.h>
 
 /**
  * \function igraph_community_optimal_modularity
- * Calculate the community structure with the highest modularity value
+ * \brief Calculate the community structure with the highest modularity value.
  *
- * This function calculates the optimal community structure for a
- * graph, in terms of maximal modularity score.
+ * This function calculates the optimal community structure for a graph, in
+ * terms of maximal modularity score. Both undirected and directed graphs
+ * are supported.
  *
  * </para><para>
  * The calculation is done by transforming the modularity maximization
  * into an integer programming problem, and then calling the GLPK
  * library to solve that. Please see Ulrik Brandes et al.: On
  * Modularity Clustering, IEEE Transactions on Knowledge and Data
- * Engineering 20(2):172-188, 2008.
+ * Engineering 20(2):172-188, 2008
+ * https://doi.org/10.1109/TKDE.2007.190689.
  *
  * </para><para>
- * Note that modularity optimization is an NP-complete problem, and
+ * Note that exact modularity optimization is an NP-complete problem, and
  * all known algorithms for it have exponential time complexity. This
  * means that you probably don't want to run this function on larger
  * graphs. Graphs with up to fifty vertices should be fine, graphs
  * with a couple of hundred vertices might be possible.
  *
- * \param graph The input graph. It is always treated as undirected.
+ * \param graph The input graph. It may be undirected or directed.
+ * \param weights Vector giving the weights of the edges. If it is
+ *        \c NULL then each edge is supposed to have the same weight.
+ * \param resolution  Resolution parameter. Must be greater than or equal to 0.
+ *        Lower values favor fewer, larger communities; higher values favor more,
+ *        smaller communities. Set it to 1 to use the classical definition of
+ *        modularity.
  * \param modularity Pointer to a real number, or a null pointer.
  *        If it is not a null pointer, then a optimal modularity value
  *        is returned here.
  * \param membership Pointer to a vector, or a null pointer. If not a
  *        null pointer, then the membership vector of the optimal
  *        community structure is stored here.
- * \param weights Vector giving the weights of the edges. If it is
- *        \c NULL then each edge is supposed to have the same weight.
  * \return Error code.
+ *         When GLPK is not available, \c IGRAPH_UNIMPLEMENTED is returned.
  *
  * \sa \ref igraph_modularity(), \ref igraph_community_fastgreedy()
  * for an algorithm that finds a local optimum in a greedy way.
@@ -77,21 +79,22 @@
  * \example examples/simple/igraph_community_optimal_modularity.c
  */
 
-int igraph_community_optimal_modularity(const igraph_t *graph,
-                                        igraph_real_t *modularity,
-                                        igraph_vector_t *membership,
-                                        const igraph_vector_t *weights) {
+igraph_error_t igraph_community_optimal_modularity(const igraph_t *graph,
+                                                   const igraph_vector_t *weights,
+                                                   const igraph_real_t resolution,
+                                                   igraph_real_t *modularity,
+                                                   igraph_vector_int_t *membership) {
 
 #ifndef HAVE_GLPK
-    IGRAPH_ERROR("GLPK is not available",
-                 IGRAPH_UNIMPLEMENTED);
+    IGRAPH_ERROR("GLPK is not available.", IGRAPH_UNIMPLEMENTED);
 #else
 
-    igraph_integer_t no_of_nodes = (igraph_integer_t) igraph_vcount(graph);
-    igraph_integer_t no_of_edges = (igraph_integer_t) igraph_ecount(graph);
-    igraph_bool_t directed = igraph_is_directed(graph);
-    int no_of_variables = no_of_nodes * (no_of_nodes + 1) / 2;
-    int i, j, k, l, st;
+    const igraph_int_t no_of_nodes = igraph_vcount(graph);
+    const igraph_int_t no_of_edges = igraph_ecount(graph);
+    const igraph_bool_t directed = igraph_is_directed(graph);
+    igraph_int_t no_of_variables;
+    igraph_int_t i, j, k, l;
+    int st;
     int idx[] = { 0, 0, 0, 0 };
     double coef[] = { 0.0, 1.0, 1.0, -2.0 };
     igraph_real_t total_weight;
@@ -100,6 +103,10 @@ int igraph_community_optimal_modularity(const igraph_t *graph,
 
     glp_prob *ip;
     glp_iocp parm;
+
+    if (resolution < 0.0) {
+        IGRAPH_ERRORF("Resolution must be positive, got %g.", IGRAPH_EINVAL, resolution);
+    }
 
     if (weights) {
         if (igraph_vector_size(weights) != no_of_edges) {
@@ -111,7 +118,7 @@ int igraph_community_optimal_modularity(const igraph_t *graph,
             if (minweight < 0) {
                 IGRAPH_ERROR("Negative weights are not allowed in weight vector.", IGRAPH_EINVAL);
             }
-            if (igraph_is_nan(minweight)) {
+            if (isnan(minweight)) {
                 IGRAPH_ERROR("Weights must not be NaN.", IGRAPH_EINVAL);
             }
         }
@@ -119,14 +126,40 @@ int igraph_community_optimal_modularity(const igraph_t *graph,
 
     /* Avoid problems with the null graph */
     if (no_of_nodes < 2) {
+        /* Cater for the case when membership was not given, but modularity was requested. */
+        igraph_vector_int_t imembership, *pmembership;
         if (membership) {
-            IGRAPH_CHECK(igraph_vector_resize(membership, no_of_nodes));
-            igraph_vector_fill(membership, 0);
+            pmembership = membership;
+        } else {
+            IGRAPH_VECTOR_INT_INIT_FINALLY(&imembership, no_of_nodes);
+            pmembership = &imembership;
         }
+
+        IGRAPH_CHECK(igraph_vector_int_resize(pmembership, no_of_nodes));
+        igraph_vector_int_null(pmembership);
+
         if (modularity) {
-            IGRAPH_CHECK(igraph_modularity(graph, membership, 0, 1, igraph_is_directed(graph), modularity));
+            IGRAPH_CHECK(igraph_modularity(graph, pmembership, NULL, resolution, igraph_is_directed(graph), modularity));
         }
+
+        if (! membership) {
+            igraph_vector_int_destroy(&imembership);
+            IGRAPH_FINALLY_CLEAN(1);
+        }
+
         return IGRAPH_SUCCESS;
+    }
+
+    /* no_of_variables = no_of_nodes * (no_of_nodes + 1) / 2;
+     *
+     * Here we do not use IGRAPH_SAFE_N_CHOOSE_2 because later we rely on
+     * (no_of_nodes + 1) * no_of_nodes not overflowing even before the
+     * division by 2. See IDX() macro.
+     */
+    IGRAPH_SAFE_MULT(no_of_nodes + 1, no_of_nodes, &no_of_variables);
+    no_of_variables /= 2;
+    if (no_of_variables > INT_MAX) {
+        IGRAPH_ERROR("Problem too large for GLPK.", IGRAPH_EOVERFLOW);
     }
 
     if (weights) {
@@ -144,8 +177,8 @@ int igraph_community_optimal_modularity(const igraph_t *graph,
             *modularity = IGRAPH_NAN;
         }
         if (membership) {
-            IGRAPH_CHECK(igraph_vector_resize(membership, no_of_nodes));
-            igraph_vector_null(membership);
+            IGRAPH_CHECK(igraph_vector_int_resize(membership, no_of_nodes));
+            igraph_vector_int_null(membership);
         }
     }
 
@@ -162,14 +195,14 @@ int igraph_community_optimal_modularity(const igraph_t *graph,
     IGRAPH_FINALLY(igraph_i_glp_delete_prob, ip);
 
     glp_set_obj_dir(ip, GLP_MAX);
-    st = glp_add_cols(ip, no_of_variables);
+    st = glp_add_cols(ip, (int) no_of_variables);
 
     /* variables are binary */
     for (i = 0; i < no_of_variables; i++) {
-        glp_set_col_kind(ip, (st + i), GLP_BV);
+        glp_set_col_kind(ip, (int)(st + i), GLP_BV);
     }
 
-#define IDX(a,b) ((b)*((b)+1)/2+(a))
+#define IDX(a,b) (int)((b)*((b)+1)/2+(a))
 
     /* reflexivity */
     for (i = 0; i < no_of_nodes; i++) {
@@ -211,10 +244,12 @@ int igraph_community_optimal_modularity(const igraph_t *graph,
             for (j = i + 1; j < no_of_nodes; j++) {
                 c = -VECTOR(indegree)[i] * VECTOR(outdegree)[j] / total_weight \
                     -VECTOR(outdegree)[i] * VECTOR(indegree)[j] / total_weight;
+                c *= resolution;
                 glp_set_obj_coef(ip, st + IDX(i, j), c);
             }
             /* special case for (i,i) */
             c = -VECTOR(indegree)[i] * VECTOR(outdegree)[i] / total_weight;
+            c *= resolution;
             glp_set_obj_coef(ip, st + IDX(i, i), c);
         }
 
@@ -248,8 +283,8 @@ int igraph_community_optimal_modularity(const igraph_t *graph,
     }
 
     if (membership) {
-        long int comm = 0;   /* id of the last community that was found */
-        IGRAPH_CHECK(igraph_vector_resize(membership, no_of_nodes));
+        igraph_int_t comm = 0;   /* id of the last community that was found */
+        IGRAPH_CHECK(igraph_vector_int_resize(membership, no_of_nodes));
         for (i = 0; i < no_of_nodes; i++) {
 
             IGRAPH_ALLOW_INTERRUPTION();

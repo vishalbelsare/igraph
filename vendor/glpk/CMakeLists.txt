@@ -81,6 +81,9 @@ target_include_directories(
   ${PROJECT_BINARY_DIR}/src # config.h for TLS
 )
 
+# We are using IGRAPH_FILE_BASENAME in glpk/env/env.h
+define_file_basename_for_sources(glpk_vendored)
+
 if (BUILD_SHARED_LIBS)
   set_property(TARGET glpk_vendored PROPERTY POSITION_INDEPENDENT_CODE ON)
 endif()
@@ -89,9 +92,10 @@ endif()
 # function as is (without visibility specification)
 target_compile_definitions(glpk_vendored PRIVATE IGRAPH_STATIC)
 
-# GLPK requires __WOE__ to be defined when using MSVC-style compilers
+# GLPK requires __WOE__ to be defined when building for Windows,
+# either with MSVC or with MinGW.
 # See w64/config_VC in the original GLPK distribution
-if (MSVC)
+if (WIN32)
   target_compile_definitions(glpk_vendored PRIVATE __WOE__=1)
 endif()
 
@@ -101,7 +105,7 @@ if (MSVC)
   )
 else()
   target_compile_options(glpk_vendored PRIVATE
-    $<$<C_COMPILER_ID:Intel>:-wd161 -Wno-return-type>
-    $<$<C_COMPILER_ID:GCC,Clang,AppleClang>:-Wno-return-type -Wno-unused-value -Wno-dangling-else -Wno-logical-op-parentheses>
+    $<$<C_COMPILER_ID:Intel>:-wd161>
+    $<$<C_COMPILER_ID:GCC,Clang,AppleClang,IntelLLVM>:-Wno-unused-value -Wno-dangling-else -Wno-logical-op-parentheses>
   )
 endif()

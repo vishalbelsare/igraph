@@ -1,5 +1,5 @@
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2021  The igraph development team <igraph@igraph.org>
 
    This program is free software; you can redistribute it and/or modify
@@ -17,7 +17,7 @@
 */
 
 #include <igraph.h>
-#include "test_utilities.inc"
+#include "test_utilities.h"
 
 void check_and_destroy(igraph_matrix_t *result, igraph_real_t half_size) {
     igraph_real_t min, max;
@@ -27,7 +27,7 @@ void check_and_destroy(igraph_matrix_t *result, igraph_real_t half_size) {
     igraph_matrix_destroy(result);
 }
 
-int main() {
+int main(void) {
     igraph_t g;
     igraph_matrix_t result;
 

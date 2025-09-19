@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2006-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard street, Cambridge MA, 02139 USA
 
@@ -24,7 +23,7 @@
 #include <igraph.h>
 #include <stdlib.h>
 
-#include "test_utilities.inc"
+#include "test_utilities.h"
 
 igraph_vector_ptr_t custom_destructor_stack;
 
@@ -32,7 +31,7 @@ void custom_destructor(void* ptr) {
     igraph_vector_ptr_push_back(&custom_destructor_stack, ptr);
 }
 
-int main() {
+int main(void) {
 
     igraph_vector_ptr_t v1, v2;
     igraph_vector_ptr_t v3 = IGRAPH_VECTOR_PTR_NULL;
@@ -93,26 +92,26 @@ int main() {
     }
     igraph_vector_ptr_destroy_all(&v1);
 
-    /* igraph_vector_ptr_e */
+    /* igraph_vector_ptr_get */
     igraph_vector_ptr_init(&v1, 5);
     VECTOR(v1)[0] = &d1;
     VECTOR(v1)[1] = &d2;
     VECTOR(v1)[2] = &d3;
     VECTOR(v1)[3] = &d4;
     VECTOR(v1)[4] = &d5;
-    if (igraph_vector_ptr_e(&v1, 0) != &d1) {
+    if (igraph_vector_ptr_get(&v1, 0) != &d1) {
         return 5;
     }
-    if (igraph_vector_ptr_e(&v1, 1) != &d2) {
+    if (igraph_vector_ptr_get(&v1, 1) != &d2) {
         return 6;
     }
-    if (igraph_vector_ptr_e(&v1, 2) != &d3) {
+    if (igraph_vector_ptr_get(&v1, 2) != &d3) {
         return 7;
     }
-    if (igraph_vector_ptr_e(&v1, 3) != &d4) {
+    if (igraph_vector_ptr_get(&v1, 3) != &d4) {
         return 8;
     }
-    if (igraph_vector_ptr_e(&v1, 4) != &d5) {
+    if (igraph_vector_ptr_get(&v1, 4) != &d5) {
         return 9;
     }
     igraph_vector_ptr_destroy(&v1);
@@ -124,19 +123,19 @@ int main() {
     igraph_vector_ptr_set(&v1, 2, &d3);
     igraph_vector_ptr_set(&v1, 3, &d4);
     igraph_vector_ptr_set(&v1, 4, &d5);
-    if (igraph_vector_ptr_e(&v1, 0) != &d1) {
+    if (igraph_vector_ptr_get(&v1, 0) != &d1) {
         return 5;
     }
-    if (igraph_vector_ptr_e(&v1, 1) != &d2) {
+    if (igraph_vector_ptr_get(&v1, 1) != &d2) {
         return 6;
     }
-    if (igraph_vector_ptr_e(&v1, 2) != &d3) {
+    if (igraph_vector_ptr_get(&v1, 2) != &d3) {
         return 7;
     }
-    if (igraph_vector_ptr_e(&v1, 3) != &d4) {
+    if (igraph_vector_ptr_get(&v1, 3) != &d4) {
         return 8;
     }
-    if (igraph_vector_ptr_e(&v1, 4) != &d5) {
+    if (igraph_vector_ptr_get(&v1, 4) != &d5) {
         return 9;
     }
     igraph_vector_ptr_destroy(&v1);
@@ -169,26 +168,26 @@ int main() {
     if (igraph_vector_ptr_size(&v1) != 5) {
         return 11;
     }
-    if (igraph_vector_ptr_e(&v1, 0) != &d1) {
+    if (igraph_vector_ptr_get(&v1, 0) != &d1) {
         return 12;
     }
-    if (igraph_vector_ptr_e(&v1, 1) != &d2) {
+    if (igraph_vector_ptr_get(&v1, 1) != &d2) {
         return 13;
     }
-    if (igraph_vector_ptr_e(&v1, 2) != &d3) {
+    if (igraph_vector_ptr_get(&v1, 2) != &d3) {
         return 14;
     }
-    if (igraph_vector_ptr_e(&v1, 3) != &d4) {
+    if (igraph_vector_ptr_get(&v1, 3) != &d4) {
         return 15;
     }
-    if (igraph_vector_ptr_e(&v1, 4) != &d5) {
+    if (igraph_vector_ptr_get(&v1, 4) != &d5) {
         return 16;
     }
     igraph_vector_ptr_destroy(&v1);
 
     /* igraph_vector_ptr_view */
     ptr = (void**) malloc(5 * sizeof(void*));
-    igraph_vector_ptr_view(&v3, ptr, 5);
+    v3 = igraph_vector_ptr_view(ptr, 5);
     ptr[0] = &d1;
     ptr[1] = &d2;
     ptr[2] = &d3;
@@ -200,8 +199,8 @@ int main() {
         }
     }
 
-    /* igraph_vector_ptr_init_copy */
-    igraph_vector_ptr_init_copy(&v1, ptr, 5);
+    /* igraph_vector_ptr_init_array */
+    igraph_vector_ptr_init_array(&v1, ptr, 5);
     for (i = 0; i < igraph_vector_ptr_size(&v1); i++) {
         if ( *((int*)VECTOR(v1)[i]) != i + 1) {
             return 18;
@@ -225,7 +224,7 @@ int main() {
     igraph_vector_ptr_set(&v1, 2, &d3);
     igraph_vector_ptr_set(&v1, 3, &d4);
     igraph_vector_ptr_set(&v1, 4, &d5);
-    igraph_vector_ptr_copy(&v2, &v1);
+    igraph_vector_ptr_init_copy(&v2, &v1);
     igraph_vector_ptr_destroy(&v1);
     for (i = 0; i < igraph_vector_ptr_size(&v2); i++) {
         if ( *((int*)VECTOR(v2)[i]) != i + 1) {

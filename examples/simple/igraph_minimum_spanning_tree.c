@@ -1,8 +1,6 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
-   Copyright (C) 2006-2012  Gabor Csardi <csardi.gabor@gmail.com>
-   334 Harvard st, Cambridge MA, 02139 USA
+   igraph library.
+   Copyright (C) 2006-2024  The igraph development team <igraph@igraph.org>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -15,56 +13,55 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc.,  51 Franklin Street, Fifth Floor, Boston, MA
-   02110-1301 USA
-
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include <igraph.h>
 
-int main() {
+int main(void) {
+    igraph_t graph;
+    igraph_vector_t eb;
+    igraph_vector_int_t edges;
 
-    igraph_t g, tree;
-    igraph_vector_t eb, edges;
-    long int i;
+    /* Initialize the library. */
+    igraph_setup();
 
-    igraph_small(&g, 0, IGRAPH_UNDIRECTED,
-                 0,  1,  0,  2,  0,  3,  0,  4,  0,  5,
-                 0,  6,  0,  7,  0,  8,  0, 10,  0, 11,
-                 0, 12,  0, 13,  0, 17,  0, 19,  0, 21,
-                 0, 31,  1,  2,  1,  3,  1,  7,  1, 13,
-                 1, 17,  1, 19,  1, 21,  1, 30,  2,  3,
-                 2,  7,  2,  8,  2,  9,  2, 13,  2, 27,
-                 2, 28,  2, 32,  3,  7,  3, 12,  3, 13,
-                 4,  6,  4, 10,  5,  6,  5, 10,  5, 16,
-                 6, 16,  8, 30,  8, 32,  8, 33,  9, 33,
-                 13, 33, 14, 32, 14, 33, 15, 32, 15, 33,
-                 18, 32, 18, 33, 19, 33, 20, 32, 20, 33,
-                 22, 32, 22, 33, 23, 25, 23, 27, 23, 29,
-                 23, 32, 23, 33, 24, 25, 24, 27, 24, 31,
-                 25, 31, 26, 29, 26, 33, 27, 33, 28, 31,
-                 28, 33, 29, 32, 29, 33, 30, 32, 30, 33,
-                 31, 32, 31, 33, 32, 33,
-                 -1);
+    /* Create the vector where the tree edges will be stored. */
+    igraph_vector_int_init(&edges, 0);
 
-    igraph_vector_init(&eb, igraph_ecount(&g));
-    igraph_edge_betweenness(&g, &eb, IGRAPH_UNDIRECTED, /*weights=*/ 0);
-    for (i = 0; i < igraph_vector_size(&eb); i++) {
-        VECTOR(eb)[i] = -VECTOR(eb)[i];
+    /* Create the Frucht graph */
+    igraph_famous(&graph, "Frucht");
+
+    /* Compute the edge betweenness. */
+    igraph_vector_init(&eb, igraph_ecount(&graph));
+    igraph_edge_betweenness(&graph, /*weights=*/ NULL, &eb, igraph_ess_all(IGRAPH_EDGEORDER_ID), IGRAPH_UNDIRECTED, false);
+
+    /* Use Prim's algorithm to compute the edges that belong to the minimum weight
+     * spanning tree, using edge betweenness values as edge weights. */
+    igraph_minimum_spanning_tree(&graph, &edges, &eb, IGRAPH_MST_PRIM);
+    printf("Minimum spanning tree edges:\n");
+    igraph_vector_int_print(&edges);
+
+    /* A maximum spanning tree can be computed by first negating the weights. */
+    igraph_vector_scale(&eb, -1);
+
+    /* Compute and output the edges that belong to the maximum weight spanning tree,
+     * letting igraph automatically select the most suitable algorithm. */
+    igraph_minimum_spanning_tree(&graph, &edges, &eb, IGRAPH_MST_AUTOMATIC);
+    printf("\nMaximum spanning tree edges:\n");
+    igraph_vector_int_print(&edges);
+
+    igraph_real_t total_tree_weight = 0;
+    igraph_int_t n = igraph_vector_int_size(&edges);
+    for (igraph_int_t i=0; i < n; i++) {
+        total_tree_weight += -VECTOR(eb)[ VECTOR(edges)[i] ];
     }
+    printf("\nTotal maximum spanning tree weight: %g\n", total_tree_weight);
 
-    igraph_minimum_spanning_tree_prim(&g, &tree, &eb);
-    igraph_write_graph_edgelist(&tree, stdout);
-
-    igraph_vector_init(&edges, 0);
-    igraph_minimum_spanning_tree(&g, &edges, &eb);
-    igraph_vector_print(&edges);
-    igraph_vector_destroy(&edges);
-
-    igraph_destroy(&tree);
-    igraph_destroy(&g);
+    /* Clean up */
+    igraph_destroy(&graph);
     igraph_vector_destroy(&eb);
+    igraph_vector_int_destroy(&edges);
 
     return 0;
 }

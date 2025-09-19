@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2007-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard street, Cambridge MA, 02139 USA
 
@@ -24,17 +23,17 @@
 #include <igraph.h>
 #include <stdlib.h>
 
-#include "test_utilities.inc"
+#include "test_utilities.h"
 
-int main() {
+int main(void) {
 
-    igraph_vector_t v1, v2, v3;
+    igraph_vector_t v1, v2, v3, v4, v5;
     igraph_real_t min, max;
-    long int imin, imax;
+    igraph_int_t imin, imax;
     int i;
 
-    igraph_vector_init_seq(&v1, 1, 10);
-    igraph_vector_init_seq(&v2, 0, 9);
+    igraph_vector_init_range(&v1, 1, 11);
+    igraph_vector_init_range(&v2, 0, 10);
 
     igraph_vector_swap(&v1, &v2);
     print_vector_format(&v1, stdout, "%g");
@@ -47,6 +46,23 @@ int main() {
     igraph_vector_reverse(&v2);
     print_vector_format(&v2, stdout, "%g");
     igraph_vector_reverse(&v2);
+    print_vector_format(&v2, stdout, "%g");
+
+    /* reverse an odd number of elements */
+    igraph_vector_reverse_section(&v2, 3, 6);
+    print_vector_format(&v2, stdout, "%g");
+    igraph_vector_reverse_section(&v2, 3, 6);
+    print_vector_format(&v2, stdout, "%g");
+
+    /* reverse an even number of elements */
+    igraph_vector_reverse_section(&v2, 3, 7);
+    print_vector_format(&v2, stdout, "%g");
+    igraph_vector_reverse_section(&v2, 3, 7);
+    print_vector_format(&v2, stdout, "%g");
+
+    igraph_vector_rotate_left(&v2, 3);
+    print_vector_format(&v2, stdout, "%g");
+    igraph_vector_rotate_left(&v2, -3);
     print_vector_format(&v2, stdout, "%g");
 
     igraph_vector_destroy(&v1);
@@ -68,12 +84,12 @@ int main() {
 
     igraph_vector_minmax(&v1, &min, &max);
     igraph_vector_which_minmax(&v1, &imin, &imax);
-    printf("%g %g %li %li\n", min, max, imin, imax);
+    printf("%g %g %" IGRAPH_PRId " %" IGRAPH_PRId "\n", min, max, imin, imax);
 
     igraph_vector_destroy(&v1);
     igraph_vector_destroy(&v2);
 
-    igraph_vector_init_seq(&v1, 1, 10);
+    igraph_vector_init_range(&v1, 1, 11);
     igraph_vector_init(&v2, 10);
     for (i = 0; i < 10; i++) {
         VECTOR(v2)[i] = 10 - i;
@@ -81,10 +97,10 @@ int main() {
 
     igraph_vector_minmax(&v1, &min, &max);
     igraph_vector_which_minmax(&v1, &imin, &imax);
-    printf("%g %g %li %li\n", min, max, imin, imax);
+    printf("%g %g %" IGRAPH_PRId " %" IGRAPH_PRId "\n", min, max, imin, imax);
     igraph_vector_minmax(&v2, &min, &max);
     igraph_vector_which_minmax(&v2, &imin, &imax);
-    printf("%g %g %li %li\n", min, max, imin, imax);
+    printf("%g %g %" IGRAPH_PRId " %" IGRAPH_PRId "\n", min, max, imin, imax);
 
     if (igraph_vector_isnull(&v1)) {
         return 1;
@@ -100,6 +116,8 @@ int main() {
     igraph_vector_init_int(&v1, 10, 3, 5, 6, 6, 6, 7, 8, 8, 9, 10);
     igraph_vector_init_int(&v2, 10, 1, 3, 3, 6, 6, 9, 12, 15, 17, 20);
     igraph_vector_init(&v3, 0);
+    igraph_vector_init(&v4, 0);
+    igraph_vector_init(&v5, 0);
 
     igraph_vector_intersect_sorted(&v1, &v2, &v3);
     print_vector_format(&v3, stdout, "%g");
@@ -109,6 +127,28 @@ int main() {
     igraph_vector_difference_sorted(&v2, &v1, &v3);
     print_vector_format(&v3, stdout, "%g");
     igraph_vector_difference_sorted(&v2, &v2, &v3);
+    print_vector_format(&v3, stdout, "%g");
+
+    igraph_vector_difference_and_intersection_sorted(&v1, &v2, &v3, &v4, &v5);
+    print_vector_format(&v3, stdout, "%g");
+    print_vector_format(&v4, stdout, "%g");
+    print_vector_format(&v5, stdout, "%g");
+
+    igraph_vector_destroy(&v1);
+    igraph_vector_destroy(&v2);
+    igraph_vector_destroy(&v3);
+    igraph_vector_destroy(&v4);
+    igraph_vector_destroy(&v5);
+
+    igraph_vector_init_range(&v1, 0, 50);
+    igraph_vector_init_range(&v2, 20, 23);
+    igraph_vector_init(&v3, 0);
+
+    igraph_vector_intersect_sorted(&v1, &v2, &v3);
+    print_vector_format(&v3, stdout, "%g");
+    igraph_vector_difference_sorted(&v1, &v2, &v3);
+    print_vector_format(&v3, stdout, "%g");
+    igraph_vector_difference_sorted(&v2, &v1, &v3);
     print_vector_format(&v3, stdout, "%g");
 
     igraph_vector_destroy(&v1);

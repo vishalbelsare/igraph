@@ -1,8 +1,6 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
-   Copyright (C) 2006-2012  Gabor Csardi <csardi.gabor@gmail.com>
-   334 Harvard street, Cambridge, MA 02139 USA
+   igraph library.
+   Copyright (C) 2024  The igraph development team <igraph@igraph.org>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -15,47 +13,44 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc.,  51 Franklin Street, Fifth Floor, Boston, MA
-   02110-1301 USA
-
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include <igraph.h>
 
-void print_vector(igraph_vector_t *v) {
-    long int i, n = igraph_vector_size(v);
-    for (i = 0; i < n; i++) {
-        printf(" %li", (long int) VECTOR(*v)[i]);
-    }
-    printf("\n");
-}
+int main(void) {
 
-int main() {
-
-    igraph_t g;
+    igraph_t graph;
     igraph_real_t result;
-    igraph_integer_t from, to;
-    igraph_vector_t path;
+    igraph_int_t from, to;
+    igraph_vector_int_t path, path_edge;
 
-    igraph_barabasi_game(&g, 30, /*power=*/ 1, 30, 0, 0, /*A=*/ 1,
+    /* Initialize the library. */
+    igraph_setup();
+
+    igraph_barabasi_game(&graph, 30, /*power=*/ 1, 30, 0, 0, /*A=*/ 1,
                          IGRAPH_DIRECTED, IGRAPH_BARABASI_BAG,
-                         /*start_from=*/ 0);
-    igraph_diameter(&g, &result, 0, 0, 0, IGRAPH_UNDIRECTED, 1);
+                         /*start_from=*/ NULL);
+    igraph_diameter(&graph, NULL, &result, NULL, NULL, NULL, NULL, IGRAPH_UNDIRECTED, 1);
 
-    /*   printf("Diameter: %li\n", (long int) result); */
+    /* printf("diameter: %g\n", result); */
 
-    igraph_destroy(&g);
+    igraph_destroy(&graph);
 
-    igraph_ring(&g, 10, IGRAPH_DIRECTED, 0, 0);
-    igraph_vector_init(&path, 0);
-    igraph_diameter(&g, &result, &from, &to, &path, IGRAPH_DIRECTED, 1);
-    printf("diameter: %li, from %li to %li\n", (long int) result,
-           (long int) from, (long int) to);
-    print_vector(&path);
+    igraph_ring(&graph, 10, IGRAPH_DIRECTED, 0, 0);
+    igraph_vector_int_init(&path, 0);
+    igraph_vector_int_init(&path_edge, 0);
+    igraph_diameter(&graph, NULL, &result, &from, &to, &path, &path_edge, IGRAPH_DIRECTED, 1);
+    printf(
+        "diameter: %g, from %" IGRAPH_PRId " to %" IGRAPH_PRId "\n",
+        result, from, to
+    );
+    igraph_vector_int_print(&path);
+    igraph_vector_int_print(&path_edge);
 
-    igraph_vector_destroy(&path);
-    igraph_destroy(&g);
+    igraph_vector_int_destroy(&path);
+    igraph_vector_int_destroy(&path_edge);
+    igraph_destroy(&graph);
 
     return 0;
 }

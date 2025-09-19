@@ -1,5 +1,5 @@
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2021  The igraph development team <igraph@igraph.org>
 
    This program is free software; you can redistribute it and/or modify
@@ -17,7 +17,7 @@
 */
 
 #include <igraph.h>
-#include "test_utilities.inc"
+#include "test_utilities.h"
 
 void print_and_destroy(igraph_t *g, int min, int max) {
     igraph_vector_t result;
@@ -28,7 +28,7 @@ void print_and_destroy(igraph_t *g, int min, int max) {
 }
 
 
-int main() {
+int main(void) {
     igraph_t g_empty, g_lm;
 
     igraph_small(&g_empty, 0, 0, -1);

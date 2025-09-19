@@ -1,5 +1,5 @@
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2006-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard st, Cambridge, MA, 02138 USA
 
@@ -23,7 +23,7 @@
 %{
 
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2006-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard st, Cambridge, MA, 02138 USA
 
@@ -44,11 +44,10 @@
 
 */
 
-#include "config.h"
-#include <stdlib.h>
-
 #include "io/ncol-header.h"
 #include "io/parsers/ncol-parser.h"
+
+#include <stdlib.h>
 
 #define YY_EXTRA_TYPE igraph_i_ncol_parsedata_t*
 #define YY_USER_ACTION yylloc->first_line = yylineno;
@@ -70,27 +69,24 @@
 %option reentrant
 %option bison-bridge
 %option bison-locations
+%option yylineno
 
-alnum [^ \t\n\r\0]
+/* Anything except non-printable (00-1F), space (20) and del (7F) */
+alnum [^\x00-\x20\x7f]
+
+%s LINE
 
 %%
 
  /* ------------------------------------------------whitespace------*/
-[ \t]+               { }
-
- /* ---------------------------------------------------newline------*/
-\n\r|\r\n|\n|\r      { return NEWLINE; }
+[ \t]+               { /* skip space */ }
 
  /* ----------------------------------------------alphanumeric------*/
-{alnum}+             { return ALNUM; }
+{alnum}+             { BEGIN(LINE); return ALNUM; }
 
-<<EOF>>           { if (yyextra->eof) {
-                       yyterminate();
-                    } else {
-                       yyextra->eof=1;
-                       return NEWLINE;
-                    }
-                  }
+ /* ---------------------------------------------------newline------*/
+\n\r|\r\n|\n|\r      |
+<LINE><<EOF>>        { BEGIN(INITIAL); return NEWLINE; }
 
  /* ---------------------------------------------anything else------*/
 .                    { return ERROR; }

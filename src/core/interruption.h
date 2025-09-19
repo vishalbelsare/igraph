@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2003-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard street, Cambridge, MA 02139 USA
 
@@ -26,34 +25,56 @@
 
 #include "igraph_decls.h"
 #include "igraph_interrupt.h"
-#include "config.h"
 
-__BEGIN_DECLS
+#include "config.h" /* IGRAPH_THREAD_LOCAL */
 
-extern IGRAPH_THREAD_LOCAL igraph_interruption_handler_t
-*igraph_i_interruption_handler;
+IGRAPH_BEGIN_C_DECLS
+
+extern IGRAPH_THREAD_LOCAL igraph_interruption_handler_t *igraph_i_interruption_handler;
 
 /**
  * \define IGRAPH_ALLOW_INTERRUPTION
  * \brief
  *
  * This macro should be called when interruption is allowed.  It calls
- * \ref igraph_allow_interruption() with the proper parameters and if that returns
- * anything but \c IGRAPH_SUCCESS then
- * the macro returns the "calling" function as well, with the proper
- * error code (\c IGRAPH_INTERRUPTED).
+ * \ref igraph_allow_interruption() and if that returns anything but
+ * \c IGRAPH_SUCCESS then the macro returns the "calling" function as well,
+ * with the proper error code (\c IGRAPH_INTERRUPTED).
  */
 
 #define IGRAPH_ALLOW_INTERRUPTION() \
     do { \
-        if (igraph_i_interruption_handler) { if (igraph_allow_interruption(NULL) != IGRAPH_SUCCESS) return IGRAPH_INTERRUPTED; \
-        } } while (0)
-
-#define IGRAPH_ALLOW_INTERRUPTION_NORETURN() \
-    do { \
-        if (igraph_i_interruption_handler) { igraph_allow_interruption(NULL); } \
+        if (igraph_i_interruption_handler) { \
+            if (igraph_allow_interruption()) { \
+                return IGRAPH_INTERRUPTED; \
+            } \
+        } \
     } while (0)
 
-__END_DECLS
+/**
+ * \define IGRAPH_ALLOW_INTERRUPTION_LIMITED
+ *
+ * This is a variant of IGRAPH_ALLOW_INTERRUPTION() that checks for interruption
+ * only on every 'skips' call. The 'iter' macro parameter is the name of a variable,
+ * usually of type 'int', that is used to count calls to this macto. It must be declared
+ * separately, outside of the loop where IGRAPH_ALLOW_INTERRUPTION_LIMITED() is called,
+ * and initialized to 0. Example:
+ *
+ * int myiter = 0;
+ * for (igraph_int_t i=0; i < n; i++) {
+ *     // Allow for interruption every 1000th iteration
+ *     IGRAPH_ALLOW_INTERRUPTION_LIMITED(myiter, 1000);
+ * }
+ *
+ */
+#define IGRAPH_ALLOW_INTERRUPTION_LIMITED(iter, skips) \
+    do { \
+        if (++iter >= skips) { \
+            IGRAPH_ALLOW_INTERRUPTION(); \
+            iter = 0; \
+        } \
+    } while (0)
+
+IGRAPH_END_C_DECLS
 
 #endif

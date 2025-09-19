@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2007-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard st, Cambridge MA, 02139 USA
 
@@ -24,45 +23,49 @@
 #include <igraph.h>
 
 int print_mincut(const igraph_t *graph, igraph_real_t value,
-                 const igraph_vector_t *partition,
-                 const igraph_vector_t *partition2,
-                 const igraph_vector_t *cut,
+                 const igraph_vector_int_t *partition,
+                 const igraph_vector_int_t *partition2,
+                 const igraph_vector_int_t *cut,
                  const igraph_vector_t *capacity) {
 
-    long int i, nc = igraph_vector_size(cut);
+    igraph_int_t i, nc = igraph_vector_int_size(cut);
     igraph_bool_t directed = igraph_is_directed(graph);
 
     printf("mincut value: %g\n", (double) value);
     printf("first partition:  ");
-    igraph_vector_print(partition);
+    igraph_vector_int_print(partition);
     printf("second partition: ");
-    igraph_vector_print(partition2);
+    igraph_vector_int_print(partition2);
     printf("edges in the cut: ");
     for (i = 0; i < nc; i++) {
-        long int edge = VECTOR(*cut)[i];
-        long int from = IGRAPH_FROM(graph, edge);
-        long int to  = IGRAPH_TO  (graph, edge);
+        igraph_int_t edge = VECTOR(*cut)[i];
+        igraph_int_t from = IGRAPH_FROM(graph, edge);
+        igraph_int_t to  = IGRAPH_TO  (graph, edge);
         if (!directed && from > to) {
-            igraph_integer_t tmp = from;
+            igraph_int_t tmp = from;
             from = to;
             to = tmp;
         }
-        printf("%li-%li (%g), ", from, to, VECTOR(*capacity)[edge]);
+        printf("%" IGRAPH_PRId "-%" IGRAPH_PRId " (%g), ", from, to, VECTOR(*capacity)[edge]);
     }
     printf("\n");
 
     return 0;
 }
 
-int main() {
+int main(void) {
 
     igraph_t g;
-    igraph_vector_t weights, partition, partition2, cut;
+    igraph_vector_int_t partition, partition2, cut;
+    igraph_vector_t weights;
     igraph_real_t value;
 
-    igraph_vector_init(&partition, 0);
-    igraph_vector_init(&partition2, 0);
-    igraph_vector_init(&cut, 0);
+    /* Initialize the library. */
+    igraph_setup();
+
+    igraph_vector_int_init(&partition, 0);
+    igraph_vector_int_init(&partition2, 0);
+    igraph_vector_int_init(&cut, 0);
 
     /* -------------------------------------------- */
 
@@ -103,9 +106,9 @@ int main() {
 
     /* -------------------------------------------- */
 
-    igraph_vector_destroy(&cut);
-    igraph_vector_destroy(&partition2);
-    igraph_vector_destroy(&partition);
+    igraph_vector_int_destroy(&cut);
+    igraph_vector_int_destroy(&partition2);
+    igraph_vector_int_destroy(&partition);
 
     return 0;
 }

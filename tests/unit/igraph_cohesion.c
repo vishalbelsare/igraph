@@ -1,5 +1,5 @@
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2021  The igraph development team <igraph@igraph.org>
 
    This program is free software; you can redistribute it and/or modify
@@ -18,12 +18,12 @@
 
 #include <igraph.h>
 
-#include "test_utilities.inc"
+#include "test_utilities.h"
 
-int main() {
+int main(void) {
 
     igraph_t g;
-    igraph_integer_t value;
+    igraph_int_t value;
     igraph_bool_t checks = 1;
 
     igraph_small(&g, 7, IGRAPH_DIRECTED,

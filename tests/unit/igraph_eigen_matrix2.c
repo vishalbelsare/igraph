@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2011-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard st, Cambridge MA, 02139 USA
 
@@ -23,14 +22,14 @@
 
 #include <igraph.h>
 
-#include "test_utilities.inc"
+#include "test_utilities.h"
 
 #define DUMP() do {             \
         igraph_vector_complex_print(&values);   \
         igraph_vector_complex_print(&values2);  \
     } while(0)
 
-int main() {
+int main(void) {
 
     const int nodes = 10;
     igraph_matrix_t mat2;

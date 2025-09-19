@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2006-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard st, Cambridge MA, 02139 USA
 
@@ -23,9 +22,12 @@
 
 #include <igraph.h>
 
-int main() {
+int main(void) {
 
     igraph_t g;
+
+    /* Initialize the library. */
+    igraph_setup();
 
     igraph_small(&g, 0, IGRAPH_DIRECTED, 0, 1, 1, 2, 2, 3, 3, 4, 6, 1, -1);
     igraph_write_graph_edgelist(&g, stdout);

@@ -1,7 +1,5 @@
-/* -*- mode: C -*-  */
-/* vim:set ts=4 sw=4 sts=4 et: */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2003-2021 The igraph development team
 
    This program is free software; you can redistribute it and/or modify
@@ -31,6 +29,8 @@
 #include "igraph_random.h"
 
 #include "core/interruption.h"
+#include "core/math.h" /* M_SQRT2 */
+#include "misc/graphicality.h"
 
 /**
  * \ingroup generators
@@ -38,102 +38,123 @@
  * \brief Non-growing random graph with edge probabilities proportional to node fitness scores.
  *
  * This game generates a directed or undirected random graph where the
- * probability of an edge between vertices i and j depends on the fitness
+ * probability of an edge between vertices \c i and \c j depends on the fitness
  * scores of the two vertices involved. For undirected graphs, each vertex
  * has a single fitness score. For directed graphs, each vertex has an out-
- * and an in-fitness, and the probability of an edge from i to j depends on
- * the out-fitness of vertex i and the in-fitness of vertex j.
+ * and an in-fitness, and the probability of an edge from \c i to \c j depends on
+ * the out-fitness of vertex \c i and the in-fitness of vertex \c j.
  *
  * </para><para>
- * The generation process goes as follows. We start from N disconnected nodes
- * (where N is given by the length of the fitness vector). Then we randomly
- * select two vertices i and j, with probabilities proportional to their
- * fitnesses. (When the generated graph is directed, i is selected according to
- * the out-fitnesses and j is selected according to the in-fitnesses). If the
+ * The generation process goes as follows. We start from \c N disconnected nodes
+ * (where \c N is given by the length of the fitness vector). Then we randomly
+ * select two vertices \c i and \c j, with probabilities proportional to their
+ * fitnesses. (When the generated graph is directed, \c i is selected according to
+ * the out-fitnesses and \c j is selected according to the in-fitnesses). If the
  * vertices are not connected yet (or if multiple edges are allowed), we
  * connect them; otherwise we select a new pair. This is repeated until the
  * desired number of links are created.
  *
  * </para><para>
- * It can be shown that the \em expected degree of each vertex will be
- * proportional to its fitness, although the actual, observed degree will not
- * be. If you need to generate a graph with an exact degree sequence, consider
- * \ref igraph_degree_sequence_game instead.
+ * The \em expected degree (though not the actual degree) of each vertex will be
+ * proportional to its fitness. This is exactly true when self-loops and multi-edges
+ * are allowed, and approximately true otherwise. If you need to generate a graph
+ * with an exact degree sequence, consider \ref igraph_degree_sequence_game() and
+ * \ref igraph_realize_degree_sequence() instead.
+ *
+ * </para><para>
+ * To generate random undirected graphs with a given expected degree sequence, set
+ * \p fitness_out (and in the directed case \p fitness_out) to the desired expected
+ * degrees, and \p no_of_edges to the corresponding edge count, i.e. half the sum of
+ * expected degrees in the undirected case, and the sum of out- or in-degrees in the
+ * directed case.
+ *
+ * </para><para>
+ * This model is similar to the better-known Chung-Lu model, implemented in igraph
+ * as \ref igraph_chung_lu_game(), but with a sharply fixed edge count.
  *
  * </para><para>
  * This model is commonly used to generate static scale-free networks. To
  * achieve this, you have to draw the fitness scores from the desired power-law
- * distribution. Alternatively, you may use \ref igraph_static_power_law_game
+ * distribution. Alternatively, you may use \ref igraph_static_power_law_game()
  * which generates the fitnesses for you with a given exponent.
  *
  * </para><para>
- * Reference: Goh K-I, Kahng B, Kim D: Universal behaviour of load distribution
- * in scale-free networks. Phys Rev Lett 87(27):278701, 2001.
+ * Reference:
+ *
+ * </para><para>
+ * Goh K-I, Kahng B, Kim D: Universal behaviour of load distribution
+ * in scale-free networks. Phys Rev Lett 87(27):278701, 2001
+ * https://doi.org/10.1103/PhysRevLett.87.278701.
  *
  * \param graph        Pointer to an uninitialized graph object.
+ * \param no_of_edges  The number of edges in the generated graph.
  * \param fitness_out  A numeric vector containing the fitness of each vertex.
  *                     For directed graphs, this specifies the out-fitness
  *                     of each vertex.
  * \param fitness_in   If \c NULL, the generated graph will be undirected.
  *                     If not \c NULL, this argument specifies the in-fitness
  *                     of each vertex.
- * \param no_of_edges  The number of edges in the generated graph.
- * \param loops        Whether to allow loop edges in the generated graph.
- * \param multiple     Whether to allow multiple edges in the generated graph.
+ * \param allowed_edge_types Controls whether multi-edges and self-loops
+ *     are allowed in the generated graph. See \ref igraph_edge_type_sw_t.
  *
  * \return Error code:
  *         \c IGRAPH_EINVAL: invalid parameter
  *         \c IGRAPH_ENOMEM: there is not enough
  *         memory for the operation.
  *
+ * \sa \ref igraph_static_power_law_game(), \ref igraph_chung_lu_game(),
+ * \ref igraph_degree_sequence_game()
+ *
  * Time complexity: O(|V| + |E| log |E|).
  */
-int igraph_static_fitness_game(igraph_t *graph, igraph_integer_t no_of_edges,
+igraph_error_t igraph_static_fitness_game(igraph_t *graph, igraph_int_t no_of_edges,
                                const igraph_vector_t *fitness_out, const igraph_vector_t *fitness_in,
-                               igraph_bool_t loops, igraph_bool_t multiple) {
-    igraph_vector_t edges = IGRAPH_VECTOR_NULL;
-    igraph_integer_t no_of_nodes;
-    igraph_integer_t outnodes, innodes, nodes;
+                               igraph_edge_type_sw_t allowed_edge_types) {
+
+    const igraph_int_t no_of_nodes = igraph_vector_size(fitness_out);
+    const igraph_bool_t directed = (fitness_in != NULL);
+    igraph_vector_int_t edges;
     igraph_vector_t cum_fitness_in, cum_fitness_out;
     igraph_vector_t *p_cum_fitness_in, *p_cum_fitness_out;
     igraph_real_t x, max_in, max_out;
     igraph_real_t max_no_of_edges;
-    igraph_bool_t is_directed = (fitness_in != 0);
-    float num_steps;
-    igraph_integer_t step_counter = 0;
-    long int i, from, to, pos;
+    igraph_real_t num_steps;
+    igraph_int_t from, to, pos;
+    igraph_bool_t loops, multiple;
+    int iter = 0;
 
-    if (fitness_out == 0) {
-        IGRAPH_ERROR("fitness_out must not be null.", IGRAPH_EINVAL);
-    }
+    IGRAPH_CHECK(igraph_i_edge_type_to_loops_multiple(allowed_edge_types, &loops, &multiple));
+
+    IGRAPH_ASSERT(fitness_out != NULL);
 
     if (no_of_edges < 0) {
         IGRAPH_ERRORF("Number of edges cannot be negative, got %" IGRAPH_PRId ".", IGRAPH_EINVAL, no_of_edges);
     }
 
-    no_of_nodes = (igraph_integer_t) igraph_vector_size(fitness_out);
-    if (no_of_nodes == 0) {
-        IGRAPH_CHECK(igraph_empty(graph, 0, is_directed));
-        return IGRAPH_SUCCESS;
+    if (no_of_edges > IGRAPH_ECOUNT_MAX && (no_of_nodes == 0 && no_of_edges > 0)) {
+        IGRAPH_ERROR("Too many edges requested.", IGRAPH_EINVAL);
     }
 
-    if (is_directed && igraph_vector_size(fitness_in) != no_of_nodes) {
-        IGRAPH_ERROR("fitness_in must have the same size as fitness_out.", IGRAPH_EINVAL);
+    if (no_of_nodes == 0) {
+        return igraph_empty(graph, no_of_nodes, directed);
+    }
+
+    if (directed && igraph_vector_size(fitness_in) != no_of_nodes) {
+        IGRAPH_ERROR("The in-fitness vector must have the same length as the out-fitness vector.", IGRAPH_EINVAL);
     }
 
     /* Sanity checks for the fitnesses */
-    if (igraph_vector_min(fitness_out) < 0) {
-        IGRAPH_ERROR("Fitness scores must be non-negative.", IGRAPH_EINVAL);
-    }
-    if (fitness_in != 0 && igraph_vector_min(fitness_in) < 0) {
-        IGRAPH_ERROR("Fitness scores must be non-negative.", IGRAPH_EINVAL);
+    if (igraph_vector_min(fitness_out) < 0 && (!directed || igraph_vector_min(fitness_in) < 0)) {
+        IGRAPH_ERROR("Fitness scores must not be negative.", IGRAPH_EINVAL);
     }
 
-    /* Avoid getting into an infinite loop when too many edges are requested */
-    if (!multiple) {
-        if (is_directed) {
+    /* Avoid getting into an infinite loop when too many edges are requested. */
+    {
+        igraph_int_t nodes;
+        if (directed) {
+            igraph_int_t outnodes, innodes;
             outnodes = innodes = nodes = 0;
-            for (i = 0; i < no_of_nodes; i++) {
+            for (igraph_int_t i = 0; i < no_of_nodes; i++) {
                 if (VECTOR(*fitness_out)[i] != 0) {
                     outnodes++;
                 }
@@ -147,7 +168,7 @@ int igraph_static_fitness_game(igraph_t *graph, igraph_integer_t no_of_edges,
             max_no_of_edges = ((igraph_real_t) outnodes) * innodes - (loops ? 0 : nodes);
         } else {
             nodes = 0;
-            for (i = 0; i < no_of_nodes; i++) {
+            for (igraph_int_t i = 0; i < no_of_nodes; i++) {
                 if (VECTOR(*fitness_out)[i] != 0) {
                     nodes++;
                 }
@@ -156,7 +177,14 @@ int igraph_static_fitness_game(igraph_t *graph, igraph_integer_t no_of_edges,
                               ? nodes * ((igraph_real_t)nodes + 1) / 2
                               : nodes * ((igraph_real_t)nodes - 1) / 2;
         }
-        if (no_of_edges > max_no_of_edges) {
+        if (max_no_of_edges == 0 && no_of_edges > 0) {
+            /* This check is necessary even when multiple edges are allowed,
+             * for example when all fitnesses are zero or only one is nonzero
+             * not self-loops are disallowed. */
+            IGRAPH_ERRORF("No edges are possible with the given fitness scores, "
+                          "but %" IGRAPH_PRId " edges were requested.", IGRAPH_EINVAL, no_of_edges);
+        }
+        if (!multiple && no_of_edges > max_no_of_edges) {
             IGRAPH_ERROR("Too many edges requested.", IGRAPH_EINVAL);
         }
     }
@@ -166,7 +194,7 @@ int igraph_static_fitness_game(igraph_t *graph, igraph_integer_t no_of_edges,
     IGRAPH_CHECK(igraph_vector_cumsum(&cum_fitness_out, fitness_out));
     max_out = igraph_vector_tail(&cum_fitness_out);
     p_cum_fitness_out = &cum_fitness_out;
-    if (is_directed) {
+    if (directed) {
         IGRAPH_VECTOR_INIT_FINALLY(&cum_fitness_in, no_of_nodes);
         IGRAPH_CHECK(igraph_vector_cumsum(&cum_fitness_in, fitness_in));
         max_in = igraph_vector_tail(&cum_fitness_in);
@@ -176,17 +204,16 @@ int igraph_static_fitness_game(igraph_t *graph, igraph_integer_t no_of_edges,
         p_cum_fitness_in = &cum_fitness_out;
     }
 
-    RNG_BEGIN();
     num_steps = no_of_edges;
     if (multiple) {
         /* Generating when multiple edges are allowed */
 
-        IGRAPH_VECTOR_INIT_FINALLY(&edges, 0);
-        IGRAPH_CHECK(igraph_vector_reserve(&edges, 2 * no_of_edges));
+        IGRAPH_VECTOR_INT_INIT_FINALLY(&edges, 0);
+        IGRAPH_CHECK(igraph_vector_int_reserve(&edges, 2 * no_of_edges));
 
         while (no_of_edges > 0) {
             /* Report progress after every 10000 edges */
-            if ((step_counter++) % 10000 == 0) {
+            if ((iter++) % 10000 == 0) {
                 IGRAPH_PROGRESS("Static fitness game", 100.0 * (1 - no_of_edges / num_steps), NULL);
                 IGRAPH_ALLOW_INTERRUPTION();
             }
@@ -201,17 +228,17 @@ int igraph_static_fitness_game(igraph_t *graph, igraph_integer_t no_of_edges,
                 continue;
             }
 
-            igraph_vector_push_back(&edges, from);
-            igraph_vector_push_back(&edges, to);
+            igraph_vector_int_push_back(&edges, from);
+            igraph_vector_int_push_back(&edges, to);
 
             no_of_edges--;
         }
 
         /* Create the graph */
-        IGRAPH_CHECK(igraph_create(graph, &edges, no_of_nodes, is_directed));
+        IGRAPH_CHECK(igraph_create(graph, &edges, no_of_nodes, directed));
 
         /* Clear the edge list */
-        igraph_vector_destroy(&edges);
+        igraph_vector_int_destroy(&edges);
         IGRAPH_FINALLY_CLEAN(1);
     } else {
         /* Multiple edges are disallowed */
@@ -222,7 +249,7 @@ int igraph_static_fitness_game(igraph_t *graph, igraph_integer_t no_of_edges,
         IGRAPH_FINALLY(igraph_adjlist_destroy, &al);
         while (no_of_edges > 0) {
             /* Report progress after every 10000 edges */
-            if ((step_counter++) % 10000 == 0) {
+            if ((iter++) % 10000 == 0) {
                 IGRAPH_PROGRESS("Static fitness game", 100.0 * (1 - no_of_edges / num_steps), NULL);
                 IGRAPH_ALLOW_INTERRUPTION();
             }
@@ -238,7 +265,7 @@ int igraph_static_fitness_game(igraph_t *graph, igraph_integer_t no_of_edges,
             }
 
             /* For undirected graphs, ensure that from < to */
-            if (!is_directed && from > to) {
+            if (!directed && from > to) {
                 pos = from; from = to; to = pos;
             }
 
@@ -258,7 +285,7 @@ int igraph_static_fitness_game(igraph_t *graph, igraph_integer_t no_of_edges,
          * because we did not add edges in both directions in the adjacency list.
          * We will use igraph_to_undirected in an extra step. */
         IGRAPH_CHECK(igraph_adjlist(graph, &al, IGRAPH_OUT, 1));
-        if (!is_directed) {
+        if (!directed) {
             IGRAPH_CHECK(igraph_to_undirected(graph, IGRAPH_TO_UNDIRECTED_EACH, 0));
         }
 
@@ -266,12 +293,11 @@ int igraph_static_fitness_game(igraph_t *graph, igraph_integer_t no_of_edges,
         igraph_adjlist_destroy(&al);
         IGRAPH_FINALLY_CLEAN(1);
     }
-    RNG_END();
 
     IGRAPH_PROGRESS("Static fitness game", 100.0, NULL);
 
     /* Cleanup before we create the graph */
-    if (is_directed) {
+    if (directed) {
         igraph_vector_destroy(&cum_fitness_in);
         IGRAPH_FINALLY_CLEAN(1);
     }
@@ -293,23 +319,23 @@ int igraph_static_fitness_game(igraph_t *graph, igraph_integer_t no_of_edges,
  * distributions may be specified separately.
  *
  * </para><para>
- * The game simply uses \ref igraph_static_fitness_game with appropriately
- * constructed fitness vectors. In particular, the fitness of vertex i
- * is i<superscript>-alpha</superscript>, where alpha = 1/(gamma-1)
- * and gamma is the exponent given in the arguments.
+ * The game simply uses \ref igraph_static_fitness_game() with appropriately
+ * constructed fitness vectors. In particular, the fitness of vertex \c i
+ * is <code>i^(-alpha)</code>, where <code>alpha = 1/(gamma-1)</code>
+ * and \c gamma is the exponent given in the arguments.
  *
  * </para><para>
  * To remove correlations between in- and out-degrees in case of directed
  * graphs, the in-fitness vector will be shuffled after it has been set up
- * and before \ref igraph_static_fitness_game is called.
+ * and before \ref igraph_static_fitness_game() is called.
  *
  * </para><para>
  * Note that significant finite size effects may be observed for exponents
  * smaller than 3 in the original formulation of the game. This function
  * provides an argument that lets you remove the finite size effects by
- * assuming that the fitness of vertex i is
- * (i+i0-1)<superscript>-alpha</superscript>,
- * where i0 is a constant chosen appropriately to ensure that the maximum
+ * assuming that the fitness of vertex \c i is
+ * <code>(i+i0-1)^(-alpha)</code>,
+ * where \c i0 is a constant chosen appropriately to ensure that the maximum
  * degree is less than the square root of the number of edges times the
  * average degree; see the paper of Chung and Lu, and Cho et al for more
  * details.
@@ -320,15 +346,18 @@ int igraph_static_fitness_game(igraph_t *graph, igraph_integer_t no_of_edges,
  * </para><para>
  * Goh K-I, Kahng B, Kim D: Universal behaviour of load distribution
  * in scale-free networks. Phys Rev Lett 87(27):278701, 2001.
+ * https://doi.org/10.1103/PhysRevLett.87.278701
  *
  * </para><para>
  * Chung F and Lu L: Connected components in a random graph with given
  * degree sequences. Annals of Combinatorics 6, 125-145, 2002.
+ * https://doi.org/10.1007/PL00012580
  *
  * </para><para>
  * Cho YS, Kim JS, Park J, Kahng B, Kim D: Percolation transitions in
  * scale-free networks under the Achlioptas process. Phys Rev Lett
  * 103:135702, 2009.
+ * https://doi.org/10.1103/PhysRevLett.103.135702
  *
  * \param graph        Pointer to an uninitialized graph object.
  * \param no_of_nodes  The number of nodes in the generated graph.
@@ -337,14 +366,14 @@ int igraph_static_fitness_game(igraph_t *graph, igraph_integer_t no_of_edges,
  *                     For directed graphs, this specifies the exponent of the
  *                     out-degree distribution. It must be greater than or
  *                     equal to 2. If you pass \c IGRAPH_INFINITY here, you
- *                     will get back an Erdos-Renyi random network.
+ *                     will get back an Erdős-Rényi random network.
  * \param exponent_in  If negative, the generated graph will be undirected.
  *                     If greater than or equal to 2, this argument specifies
  *                     the exponent of the in-degree distribution. If
  *                     non-negative but less than 2, an error will be
  *                     generated.
- * \param loops        Whether to allow loop edges in the generated graph.
- * \param multiple     Whether to allow multiple edges in the generated graph.
+ * \param allowed_edge_types Controls whether multi-edges and self-loops
+ *     are allowed in the generated graph. See \ref igraph_edge_type_sw_t.
  * \param finite_size_correction  Whether to use the proposed finite size
  *                     correction of Cho et al.
  *
@@ -355,15 +384,14 @@ int igraph_static_fitness_game(igraph_t *graph, igraph_integer_t no_of_edges,
  *
  * Time complexity: O(|V| + |E| log |E|).
  */
-int igraph_static_power_law_game(igraph_t *graph,
-                                 igraph_integer_t no_of_nodes, igraph_integer_t no_of_edges,
+igraph_error_t igraph_static_power_law_game(igraph_t *graph,
+                                 igraph_int_t no_of_nodes, igraph_int_t no_of_edges,
                                  igraph_real_t exponent_out, igraph_real_t exponent_in,
-                                 igraph_bool_t loops, igraph_bool_t multiple,
+                                 igraph_edge_type_sw_t allowed_edge_types,
                                  igraph_bool_t finite_size_correction) {
 
     igraph_vector_t fitness_out, fitness_in;
-    igraph_real_t alpha_out = 0.0, alpha_in = 0.0;
-    long int i;
+    igraph_real_t alpha_out, alpha_in;
     igraph_real_t j;
 
     if (no_of_nodes < 0) {
@@ -373,7 +401,7 @@ int igraph_static_power_law_game(igraph_t *graph,
     /* Calculate alpha_out */
     if (exponent_out < 2) {
         IGRAPH_ERRORF("Out-degree exponent must be >= 2, got %g.", IGRAPH_EINVAL, exponent_out);
-    } else if (igraph_finite(exponent_out)) {
+    } else if (isfinite(exponent_out)) {
         alpha_out = -1.0 / (exponent_out - 1);
     } else {
         alpha_out = 0.0;
@@ -385,12 +413,12 @@ int igraph_static_power_law_game(igraph_t *graph,
     if (finite_size_correction && alpha_out < -0.5) {
         /* See the Cho et al paper, first page first column + footnote 7 */
         j += pow(no_of_nodes, 1 + 0.5 / alpha_out) *
-             pow(10 * sqrt(2) * (1 + alpha_out), -1.0 / alpha_out) - 1;
+             pow(10 * M_SQRT2 * (1 + alpha_out), -1.0 / alpha_out) - 1;
     }
     if (j < no_of_nodes) {
         j = no_of_nodes;
     }
-    for (i = 0; i < no_of_nodes; i++, j--) {
+    for (igraph_int_t i = 0; i < no_of_nodes; i++, j--) {
         VECTOR(fitness_out)[i] = pow(j, alpha_out);
     }
 
@@ -398,7 +426,7 @@ int igraph_static_power_law_game(igraph_t *graph,
         if (exponent_in < 2) {
             IGRAPH_ERRORF("For directed graphs the in-degree exponent must be >= 2, got %g.",
                           IGRAPH_EINVAL, exponent_in);
-        } else if (igraph_finite(exponent_in)) {
+        } else if (isfinite(exponent_in)) {
             alpha_in = -1.0 / (exponent_in - 1);
         } else {
             alpha_in = 0.0;
@@ -409,24 +437,24 @@ int igraph_static_power_law_game(igraph_t *graph,
         if (finite_size_correction && alpha_in < -0.5) {
             /* See the Cho et al paper, first page first column + footnote 7 */
             j += pow(no_of_nodes, 1 + 0.5 / alpha_in) *
-                 pow(10 * sqrt(2) * (1 + alpha_in), -1.0 / alpha_in) - 1;
+                 pow(10 * M_SQRT2 * (1 + alpha_in), -1.0 / alpha_in) - 1;
         }
         if (j < no_of_nodes) {
             j = no_of_nodes;
         }
-        for (i = 0; i < no_of_nodes; i++, j--) {
+        for (igraph_int_t i = 0; i < no_of_nodes; i++, j--) {
             VECTOR(fitness_in)[i] = pow(j, alpha_in);
         }
-        IGRAPH_CHECK(igraph_vector_shuffle(&fitness_in));
+        igraph_vector_shuffle(&fitness_in);
 
         IGRAPH_CHECK(igraph_static_fitness_game(graph, no_of_edges,
-                                                &fitness_out, &fitness_in, loops, multiple));
+                                                &fitness_out, &fitness_in, allowed_edge_types));
 
         igraph_vector_destroy(&fitness_in);
         IGRAPH_FINALLY_CLEAN(1);
     } else {
         IGRAPH_CHECK(igraph_static_fitness_game(graph, no_of_edges,
-                                                &fitness_out, 0, loops, multiple));
+                                                &fitness_out, NULL, allowed_edge_types));
     }
 
     igraph_vector_destroy(&fitness_out);

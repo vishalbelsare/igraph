@@ -1,8 +1,6 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
-   Copyright (C) 2009-2012  Gabor Csardi <csardi.gabor@gmail.com>
-   334 Harvard street, Cambridge, MA 02139 USA
+   igraph library.
+   Copyright (C) 2009-2025  The igraph development team <igraph@igraph.org>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -15,25 +13,23 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc.,  51 Franklin Street, Fifth Floor, Boston, MA
-   02110-1301 USA
-
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #ifndef IGRAPH_HRG_H
 #define IGRAPH_HRG_H
 
 #include "igraph_decls.h"
-#include "igraph_vector.h"
-#include "igraph_vector_ptr.h"
 #include "igraph_datatype.h"
+#include "igraph_error.h"
+#include "igraph_graph_list.h"
+#include "igraph_vector.h"
 
-__BEGIN_DECLS
+IGRAPH_BEGIN_C_DECLS
 
 /**
  * \struct igraph_hrg_t
- * Data structure to store a hierarchical random graph
+ * \brief Data structure to store a hierarchical random graph.
  *
  * A hierarchical random graph (HRG) can be given as a binary tree,
  * where the internal vertices are labeled with real numbers.
@@ -45,6 +41,7 @@ __BEGIN_DECLS
  *
  * </para><para>
  * It has the following members:
+ *
  * \member left Vector that contains the left children of the internal
  *    tree vertices. The first vertex is always the root vertex, so
  *    the first element of the vector is the left child of the root
@@ -65,51 +62,65 @@ __BEGIN_DECLS
  */
 
 typedef struct igraph_hrg_t {
-    igraph_vector_t left, right, prob, edges, vertices;
+    igraph_vector_int_t left;
+    igraph_vector_int_t right;
+    igraph_vector_t prob;
+    igraph_vector_int_t vertices;
+    igraph_vector_int_t edges;
 } igraph_hrg_t;
 
-IGRAPH_EXPORT int igraph_hrg_init(igraph_hrg_t *hrg, int n);
+IGRAPH_EXPORT igraph_error_t igraph_hrg_init(igraph_hrg_t *hrg, igraph_int_t n);
 IGRAPH_EXPORT void igraph_hrg_destroy(igraph_hrg_t *hrg);
-IGRAPH_EXPORT int igraph_hrg_size(const igraph_hrg_t *hrg);
-IGRAPH_EXPORT int igraph_hrg_resize(igraph_hrg_t *hrg, int newsize);
+IGRAPH_EXPORT igraph_int_t igraph_hrg_size(const igraph_hrg_t *hrg);
+IGRAPH_EXPORT igraph_error_t igraph_hrg_resize(igraph_hrg_t *hrg, igraph_int_t newsize);
 
-IGRAPH_EXPORT int igraph_hrg_fit(const igraph_t *graph,
-                                 igraph_hrg_t *hrg,
-                                 igraph_bool_t start,
-                                 int steps);
+IGRAPH_EXPORT igraph_error_t igraph_hrg_fit(
+    const igraph_t *graph, igraph_hrg_t *hrg, igraph_bool_t start,
+    igraph_int_t steps
+);
 
-IGRAPH_EXPORT int igraph_hrg_sample(const igraph_t *graph,
-                                    igraph_t *sample,
-                                    igraph_vector_ptr_t *samples,
-                                    igraph_integer_t no_samples,
-                                    igraph_hrg_t *hrg,
-                                    igraph_bool_t start);
+IGRAPH_EXPORT igraph_error_t igraph_hrg_sample(
+    const igraph_hrg_t *hrg, igraph_t *sample
+);
 
-IGRAPH_EXPORT int igraph_hrg_game(igraph_t *graph,
-                                  const igraph_hrg_t *hrg);
+IGRAPH_EXPORT igraph_error_t igraph_hrg_sample_many(
+    const igraph_hrg_t *hrg, igraph_graph_list_t *samples,
+    igraph_int_t num_samples
+);
 
-IGRAPH_EXPORT int igraph_hrg_dendrogram(igraph_t *graph,
-                                        const igraph_hrg_t *hrg);
+IGRAPH_EXPORT igraph_error_t igraph_hrg_game(
+    igraph_t *graph, const igraph_hrg_t *hrg
+);
 
-IGRAPH_EXPORT int igraph_hrg_consensus(const igraph_t *graph,
-                                       igraph_vector_t *parents,
+IGRAPH_EXPORT igraph_error_t igraph_from_hrg_dendrogram(
+    igraph_t *graph, const igraph_hrg_t *hrg, igraph_vector_t *prob
+);
+
+IGRAPH_EXPORT igraph_error_t igraph_hrg_consensus(const igraph_t *graph,
+                                       igraph_vector_int_t *parents,
                                        igraph_vector_t *weights,
                                        igraph_hrg_t *hrg,
                                        igraph_bool_t start,
-                                       int num_samples);
+                                       igraph_int_t num_samples);
 
-IGRAPH_EXPORT int igraph_hrg_predict(const igraph_t *graph,
-                                     igraph_vector_t *edges,
+IGRAPH_EXPORT igraph_error_t igraph_hrg_predict(const igraph_t *graph,
+                                     igraph_vector_int_t *edges,
                                      igraph_vector_t *prob,
                                      igraph_hrg_t *hrg,
                                      igraph_bool_t start,
-                                     int num_samples,
-                                     int num_bins);
+                                     igraph_int_t num_samples,
+                                     igraph_int_t num_bins);
 
-IGRAPH_EXPORT int igraph_hrg_create(igraph_hrg_t *hrg,
+IGRAPH_EXPORT igraph_error_t igraph_hrg_create(igraph_hrg_t *hrg,
                                     const igraph_t *graph,
                                     const igraph_vector_t *prob);
 
-__END_DECLS
+/* Deprecated functions: */
+
+IGRAPH_DEPRECATED IGRAPH_EXPORT igraph_error_t igraph_hrg_dendrogram(
+    igraph_t *graph, const igraph_hrg_t *hrg
+);
+
+IGRAPH_END_C_DECLS
 
 #endif  /* IGRAPH_HRG_H */

@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2011-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard street, Cambridge MA, 02139 USA
 
@@ -25,11 +24,12 @@
 #include <pthread.h>
 
 void *thread_function(void *arg) {
+    IGRAPH_UNUSED(arg);
     IGRAPH_FINALLY(igraph_free, NULL);
     return 0;
 }
 
-int main() {
+int main(void) {
     pthread_t thread_id;
     void *exit_status;
 

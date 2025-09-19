@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2006-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard street, Cambridge, MA 02139 USA
 
@@ -23,14 +22,16 @@
 
 #include <igraph.h>
 
-int main() {
+int main(void) {
 
     igraph_t g;
-    igraph_vector_t v1, v2;
-    int ret;
+    igraph_vector_int_t v1, v2;
+
+    /* Initialize the library. */
+    igraph_setup();
 
     /* simple use */
-    igraph_vector_init(&v1, 8);
+    igraph_vector_int_init(&v1, 8);
     VECTOR(v1)[0] = 0;
     VECTOR(v1)[1] = 1;
     VECTOR(v1)[2] = 1;
@@ -43,11 +44,11 @@ int main() {
     if (igraph_vcount(&g) != 4) {
         return 1;
     }
-    igraph_vector_init(&v2, 0);
+    igraph_vector_int_init(&v2, 0);
     igraph_get_edgelist(&g, &v2, 0);
-    igraph_vector_sort(&v1);
-    igraph_vector_sort(&v2);
-    if (!igraph_vector_all_e(&v1, &v2)) {
+    igraph_vector_int_sort(&v1);
+    igraph_vector_int_sort(&v2);
+    if (!igraph_vector_int_all_e(&v1, &v2)) {
         return 2;
     }
     igraph_destroy(&g);
@@ -58,31 +59,14 @@ int main() {
         return 1;
     }
     igraph_get_edgelist(&g, &v2, 0);
-    igraph_vector_sort(&v1);
-    igraph_vector_sort(&v2);
-    if (!igraph_vector_all_e(&v1, &v2)) {
+    igraph_vector_int_sort(&v1);
+    igraph_vector_int_sort(&v2);
+    if (!igraph_vector_int_all_e(&v1, &v2)) {
         return 3;
     }
     igraph_destroy(&g);
-
-    /* error: IGRAPH_EINVEVECTOR */
-    igraph_set_error_handler(igraph_error_handler_ignore);
-    igraph_vector_resize(&v1, 9);
-    VECTOR(v1)[8] = 0;
-    ret = igraph_create(&g, &v1, 0, 0);
-    if (ret != IGRAPH_EINVEVECTOR) {
-        return 4;
-    }
-
-    /* error: IGRAPH_EINVVID */
-    igraph_vector_resize(&v1, 8);
-    VECTOR(v1)[7] = -1;
-    ret = igraph_create(&g, &v1, 10, 1);
-    if (ret != IGRAPH_EINVVID) {
-        return 5;
-    }
-    igraph_vector_destroy(&v1);
-    igraph_vector_destroy(&v2);
+    igraph_vector_int_destroy(&v1);
+    igraph_vector_int_destroy(&v2);
 
     return 0;
 }

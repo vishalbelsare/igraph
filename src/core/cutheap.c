@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2003-2020  The igraph development team
 
    This program is free software; you can redistribute it and/or modify
@@ -32,10 +31,10 @@
 #define INDEXINC      1
 
 static void igraph_i_cutheap_switch(igraph_i_cutheap_t *ch,
-                                    long int hidx1, long int hidx2) {
+                                    igraph_int_t hidx1, igraph_int_t hidx2) {
     if (hidx1 != hidx2) {
-        long int idx1 = (long int) VECTOR(ch->index)[hidx1];
-        long int idx2 = (long int) VECTOR(ch->index)[hidx2];
+        igraph_int_t idx1 = VECTOR(ch->index)[hidx1];
+        igraph_int_t idx2 = VECTOR(ch->index)[hidx2];
 
         igraph_real_t tmp = VECTOR(ch->heap)[hidx1];
         VECTOR(ch->heap)[hidx1] = VECTOR(ch->heap)[hidx2];
@@ -49,8 +48,8 @@ static void igraph_i_cutheap_switch(igraph_i_cutheap_t *ch,
     }
 }
 
-static void igraph_i_cutheap_sink(igraph_i_cutheap_t *ch, long int hidx) {
-    long int size = igraph_vector_size(&ch->heap);
+static void igraph_i_cutheap_sink(igraph_i_cutheap_t *ch, igraph_int_t hidx) {
+    igraph_int_t size = igraph_vector_size(&ch->heap);
     if (LEFTCHILD(hidx) >= size) {
         /* leaf node */
     } else if (RIGHTCHILD(hidx) == size ||
@@ -70,7 +69,7 @@ static void igraph_i_cutheap_sink(igraph_i_cutheap_t *ch, long int hidx) {
     }
 }
 
-static void igraph_i_cutheap_shift_up(igraph_i_cutheap_t *ch, long int hidx) {
+static void igraph_i_cutheap_shift_up(igraph_i_cutheap_t *ch, igraph_int_t hidx) {
     if (hidx == 0 || VECTOR(ch->heap)[hidx] < VECTOR(ch->heap)[PARENT(hidx)]) {
         /* at the top */
     } else {
@@ -79,19 +78,19 @@ static void igraph_i_cutheap_shift_up(igraph_i_cutheap_t *ch, long int hidx) {
     }
 }
 
-int igraph_i_cutheap_init(igraph_i_cutheap_t *ch, igraph_integer_t nodes) {
+igraph_error_t igraph_i_cutheap_init(igraph_i_cutheap_t *ch, igraph_int_t nodes) {
     ch->dnodes = nodes;
     IGRAPH_VECTOR_INIT_FINALLY(&ch->heap, nodes); /* all zero */
-    IGRAPH_CHECK(igraph_vector_init_seq(&ch->index, 0, nodes - 1));
-    IGRAPH_FINALLY(igraph_vector_destroy, &ch->index);
-    IGRAPH_CHECK(igraph_vector_init_seq(&ch->hptr, INDEXINC, nodes + INDEXINC - 1));
+    IGRAPH_CHECK(igraph_vector_int_init_range(&ch->index, 0, nodes));
+    IGRAPH_FINALLY(igraph_vector_int_destroy, &ch->index);
+    IGRAPH_CHECK(igraph_vector_init_range(&ch->hptr, INDEXINC, nodes + INDEXINC));
     IGRAPH_FINALLY_CLEAN(2);
-    return 0;
+    return IGRAPH_SUCCESS;
 }
 
 void igraph_i_cutheap_destroy(igraph_i_cutheap_t *ch) {
     igraph_vector_destroy(&ch->hptr);
-    igraph_vector_destroy(&ch->index);
+    igraph_vector_int_destroy(&ch->index);
     igraph_vector_destroy(&ch->heap);
 }
 
@@ -101,29 +100,29 @@ igraph_bool_t igraph_i_cutheap_empty(igraph_i_cutheap_t *ch) {
 
 /* Number of active vertices */
 
-igraph_integer_t igraph_i_cutheap_active_size(igraph_i_cutheap_t *ch) {
-    return (igraph_integer_t) igraph_vector_size(&ch->heap);
+igraph_int_t igraph_i_cutheap_active_size(igraph_i_cutheap_t *ch) {
+    return igraph_vector_size(&ch->heap);
 }
 
 /* Number of all (defined) vertices */
 
-igraph_integer_t igraph_i_cutheap_size(igraph_i_cutheap_t *ch) {
-    return (igraph_integer_t) (ch->dnodes);
+igraph_int_t igraph_i_cutheap_size(igraph_i_cutheap_t *ch) {
+    return ch->dnodes;
 }
 
 igraph_real_t igraph_i_cutheap_maxvalue(igraph_i_cutheap_t *ch) {
     return VECTOR(ch->heap)[0];
 }
 
-igraph_integer_t igraph_i_cutheap_popmax(igraph_i_cutheap_t *ch) {
-    long int size = igraph_vector_size(&ch->heap);
-    igraph_integer_t maxindex = (igraph_integer_t) VECTOR(ch->index)[0];
+igraph_int_t igraph_i_cutheap_popmax(igraph_i_cutheap_t *ch) {
+    igraph_int_t size = igraph_vector_size(&ch->heap);
+    igraph_int_t maxindex = VECTOR(ch->index)[0];
     /* put the last element to the top */
     igraph_i_cutheap_switch(ch, 0, size - 1);
     /* remove the last element */
-    VECTOR(ch->hptr)[(long int) igraph_vector_tail(&ch->index)] = INACTIVE;
+    VECTOR(ch->hptr)[ igraph_vector_int_tail(&ch->index)] = INACTIVE;
     igraph_vector_pop_back(&ch->heap);
-    igraph_vector_pop_back(&ch->index);
+    igraph_vector_int_pop_back(&ch->index);
     igraph_i_cutheap_sink(ch, 0);
 
     return maxindex;
@@ -131,23 +130,22 @@ igraph_integer_t igraph_i_cutheap_popmax(igraph_i_cutheap_t *ch) {
 
 /* Update the value of an active vertex, if not active it will be ignored */
 
-int igraph_i_cutheap_update(igraph_i_cutheap_t *ch, igraph_integer_t index,
-                            igraph_real_t add) {
-    igraph_real_t hidx = VECTOR(ch->hptr)[(long int)index];
+void igraph_i_cutheap_update(
+    igraph_i_cutheap_t *ch, igraph_int_t index, igraph_real_t add) {
+    igraph_real_t hidx = VECTOR(ch->hptr)[index];
     if (hidx != INACTIVE && hidx != UNDEFINED) {
-        long int hidx2 = (long int) (hidx - INDEXINC);
-        /*     printf("updating vertex %li, heap index %li\n", (long int) index, hidx2); */
+        igraph_int_t hidx2 = (hidx - INDEXINC);
+        /*     printf("updating vertex %li, heap index %li\n", index, hidx2); */
         VECTOR(ch->heap)[hidx2] += add;
         igraph_i_cutheap_sink(ch, hidx2);
         igraph_i_cutheap_shift_up(ch, hidx2);
     }
-    return 0;
 }
 
 /* Reset the value of all vertices to zero and make them active */
 
-int igraph_i_cutheap_reset_undefine(igraph_i_cutheap_t *ch, long int vertex) {
-    long int i, j, n = igraph_vector_size(&ch->hptr);
+igraph_error_t igraph_i_cutheap_reset_undefine(igraph_i_cutheap_t *ch, igraph_int_t vertex) {
+    igraph_int_t i, j, n = igraph_vector_size(&ch->hptr);
     /* undefine */
     VECTOR(ch->hptr)[vertex] = UNDEFINED;
     ch->dnodes -= 1;
@@ -155,7 +153,7 @@ int igraph_i_cutheap_reset_undefine(igraph_i_cutheap_t *ch, long int vertex) {
     IGRAPH_CHECK(igraph_vector_resize(&ch->heap, ch->dnodes));
     igraph_vector_null(&ch->heap);
 
-    IGRAPH_CHECK(igraph_vector_resize(&ch->index, ch->dnodes));
+    IGRAPH_CHECK(igraph_vector_int_resize(&ch->index, ch->dnodes));
 
     j = 0;
     for (i = 0; i < n; i++) {
@@ -166,5 +164,5 @@ int igraph_i_cutheap_reset_undefine(igraph_i_cutheap_t *ch, long int vertex) {
         }
     }
 
-    return 0;
+    return IGRAPH_SUCCESS;
 }

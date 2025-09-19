@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2006-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard street, Cambridge, MA 02139 USA
 
@@ -48,13 +47,8 @@
 #include "igraph_types.h"
 #include "igraph_datatype.h"
 
-int igraph_i_read_network(const igraph_t *graph,
-                          const igraph_vector_t *weights,
-                          network *net, igraph_bool_t use_weights,
-                          unsigned int states);
-
-void reduce_cliques(DLList<ClusterList<NNode*>*>*, FILE *file);
-void reduce_cliques2(network*, bool,  long );
-void clear_all_markers(network *net);
+igraph_error_t igraph_i_read_network_spinglass(
+    const igraph_t *graph, const igraph_vector_t *weights,
+    network *net, igraph_bool_t use_weights);
 
 #endif

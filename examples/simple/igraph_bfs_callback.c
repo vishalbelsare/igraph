@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2009-2021  The igraph development team
 
    This program is free software; you can redistribute it and/or modify
@@ -22,19 +21,27 @@
 
 #include <igraph.h>
 
-igraph_bool_t bfs_callback(const igraph_t *graph,
-                           igraph_integer_t vid,
-                           igraph_integer_t pred,
-                           igraph_integer_t succ,
-                           igraph_integer_t rank,
-                           igraph_integer_t dist,
+igraph_error_t bfs_callback(const igraph_t *graph,
+                           igraph_int_t vid,
+                           igraph_int_t pred,
+                           igraph_int_t succ,
+                           igraph_int_t rank,
+                           igraph_int_t dist,
                            void *extra) {
-    printf(" %li", (long int) vid);
-    return 0;
+    IGRAPH_UNUSED(graph);
+    IGRAPH_UNUSED(pred);
+    IGRAPH_UNUSED(succ);
+    IGRAPH_UNUSED(rank);
+    IGRAPH_UNUSED(dist);
+    printf(" %" IGRAPH_PRId "", vid);
+    return IGRAPH_SUCCESS;
 }
 
-int main() {
+int main(void) {
     igraph_t graph, ring;
+
+    /* Initialize the library. */
+    igraph_setup();
 
     /* Create a disjoint union of two rings */
     igraph_ring(&ring, 10, /*directed=*/ 0, /*mutual=*/ 0, /*circular=*/ 1);

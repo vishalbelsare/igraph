@@ -1,8 +1,6 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
-   Copyright (C) 2009-2012  Gabor Csardi <csardi.gabor@gmail.com>
-   334 Harvard street, Cambridge, MA 02139 USA
+   igraph library.
+   Copyright (C) 2009-2025  The igraph development team <igraph@igraph.org>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -15,20 +13,19 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc.,  51 Franklin Street, Fifth Floor, Boston, MA
-   02110-1301 USA
-
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #ifndef IGRAPH_VECTOR_H
 #define IGRAPH_VECTOR_H
 
-#include "igraph_decls.h"
-#include "igraph_types.h"
 #include "igraph_complex.h"
+#include "igraph_constants.h"
+#include "igraph_decls.h"
+#include "igraph_error.h"
+#include "igraph_types.h"
 
-__BEGIN_DECLS
+IGRAPH_BEGIN_C_DECLS
 
 /* -------------------------------------------------- */
 /* Flexible vector                                    */
@@ -39,18 +36,6 @@ __BEGIN_DECLS
 #include "igraph_vector_type.h"
 #include "igraph_pmt_off.h"
 #undef BASE_IGRAPH_REAL
-
-#define BASE_FLOAT
-#include "igraph_pmt.h"
-#include "igraph_vector_type.h"
-#include "igraph_pmt_off.h"
-#undef BASE_FLOAT
-
-#define BASE_LONG
-#include "igraph_pmt.h"
-#include "igraph_vector_type.h"
-#include "igraph_pmt_off.h"
-#undef BASE_LONG
 
 #define BASE_CHAR
 #include "igraph_pmt.h"
@@ -81,18 +66,6 @@ __BEGIN_DECLS
 #include "igraph_vector_pmt.h"
 #include "igraph_pmt_off.h"
 #undef BASE_IGRAPH_REAL
-
-#define BASE_FLOAT
-#include "igraph_pmt.h"
-#include "igraph_vector_pmt.h"
-#include "igraph_pmt_off.h"
-#undef BASE_FLOAT
-
-#define BASE_LONG
-#include "igraph_pmt.h"
-#include "igraph_vector_pmt.h"
-#include "igraph_pmt_off.h"
-#undef BASE_LONG
 
 #define BASE_CHAR
 #include "igraph_pmt.h"
@@ -146,38 +119,40 @@ __BEGIN_DECLS
     do { IGRAPH_CHECK(igraph_vector_int_init(v, size)); \
         IGRAPH_FINALLY(igraph_vector_int_destroy, v); } while (0)
 #endif
-#ifndef IGRAPH_VECTOR_LONG_INIT_FINALLY
-#define IGRAPH_VECTOR_LONG_INIT_FINALLY(v, size) \
-    do { IGRAPH_CHECK(igraph_vector_long_init(v, size)); \
-        IGRAPH_FINALLY(igraph_vector_long_destroy, v); } while (0)
-#endif
 
 /* -------------------------------------------------- */
 /* Type-specific vector functions                     */
 /* -------------------------------------------------- */
 
-IGRAPH_EXPORT int igraph_vector_floor(const igraph_vector_t *from, igraph_vector_long_t *to);
-IGRAPH_EXPORT int igraph_vector_round(const igraph_vector_t *from, igraph_vector_long_t *to);
+IGRAPH_EXPORT igraph_error_t igraph_vector_floor(const igraph_vector_t *from, igraph_vector_int_t *to);
+IGRAPH_EXPORT igraph_error_t igraph_vector_round(const igraph_vector_t *from, igraph_vector_int_t *to);
 
-IGRAPH_EXPORT igraph_bool_t igraph_vector_e_tol(const igraph_vector_t *lhs,
-                                                const igraph_vector_t *rhs,
-                                                igraph_real_t tol);
+IGRAPH_EXPORT IGRAPH_FUNCATTR_PURE igraph_bool_t igraph_vector_all_almost_e(const igraph_vector_t *lhs,
+                                                       const igraph_vector_t *rhs,
+                                                       igraph_real_t eps);
 
-IGRAPH_EXPORT int igraph_vector_zapsmall(igraph_vector_t *v, igraph_real_t tol);
+IGRAPH_EXPORT igraph_error_t igraph_vector_zapsmall(igraph_vector_t *v, igraph_real_t tol);
+IGRAPH_EXPORT igraph_error_t igraph_vector_complex_zapsmall(igraph_vector_complex_t *v, igraph_real_t tol) ;
 
-IGRAPH_EXPORT int igraph_vector_order(const igraph_vector_t* v, const igraph_vector_t *v2,
-                                      igraph_vector_t* res, igraph_real_t maxval);
-IGRAPH_EXPORT int igraph_vector_order1(const igraph_vector_t* v,
-                                       igraph_vector_t* res, igraph_real_t maxval);
-IGRAPH_EXPORT int igraph_vector_order1_int(const igraph_vector_t* v,
-                                           igraph_vector_int_t* res, igraph_real_t maxval);
-IGRAPH_EXPORT int igraph_vector_order2(igraph_vector_t *v);
-IGRAPH_EXPORT int igraph_vector_rank(const igraph_vector_t *v, igraph_vector_t *res,
-                                     long int nodes);
-IGRAPH_EXPORT int igraph_vector_is_nan(const igraph_vector_t *v,
-                                       igraph_vector_bool_t *is_nan);
-IGRAPH_EXPORT igraph_bool_t igraph_vector_is_any_nan(const igraph_vector_t *v);
+IGRAPH_EXPORT igraph_error_t igraph_vector_is_nan(const igraph_vector_t *v,
+                                                  igraph_vector_bool_t *is_nan);
+IGRAPH_EXPORT IGRAPH_FUNCATTR_PURE igraph_bool_t igraph_vector_is_any_nan(const igraph_vector_t *v);
+IGRAPH_EXPORT IGRAPH_FUNCATTR_PURE igraph_bool_t igraph_vector_is_all_finite(const igraph_vector_t *v);
 
-__END_DECLS
+IGRAPH_EXPORT igraph_error_t igraph_vector_int_pair_order(const igraph_vector_int_t* v, const igraph_vector_int_t *v2,
+                                      igraph_vector_int_t* res, igraph_int_t maxval);
+
+/* For internal use only: */
+
+IGRAPH_PRIVATE_EXPORT igraph_error_t igraph_i_vector_int_order(
+    const igraph_vector_int_t* v,
+    igraph_vector_int_t* res,
+    igraph_int_t maxval);
+IGRAPH_PRIVATE_EXPORT igraph_error_t igraph_i_vector_int_rank(
+    const igraph_vector_int_t *v,
+    igraph_vector_int_t *res,
+    igraph_int_t maxval);
+
+IGRAPH_END_C_DECLS
 
 #endif

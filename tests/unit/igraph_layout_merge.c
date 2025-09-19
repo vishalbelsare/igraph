@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2006-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard st, Cambridge MA, 02139 USA
 
@@ -26,17 +25,17 @@
 
 #include "layout/layout_internal.h"
 
-#include "test_utilities.inc"
+#include "test_utilities.h"
 
-int main() {
+int main(void) {
 
     /*******************/
     /* Testing the DLA */
     /*******************/
-    long int nodes = 10;
+    igraph_int_t nodes = 10;
     igraph_i_layout_mergegrid_t grid;
     igraph_vector_t x, y, r;
-    long int i;
+    igraph_int_t i;
 
     igraph_rng_seed(igraph_rng_default(), 42);
 
@@ -57,10 +56,10 @@ int main() {
     igraph_i_layout_merge_place_sphere(&grid, 0, 0, VECTOR(r)[nodes - 1], 0);
 
     for (i = 1; i < nodes; i++) {
-        /*     fprintf(stderr, "%li ", i); */
+        /*     fprintf(stderr, "%" IGRAPH_PRId " ", i); */
         igraph_i_layout_merge_dla(&grid, i,
-                                  igraph_vector_e_ptr(&x, i),
-                                  igraph_vector_e_ptr(&y, i),
+                                  igraph_vector_get_ptr(&x, i),
+                                  igraph_vector_get_ptr(&y, i),
                                   VECTOR(r)[nodes - i - 1], 0, 0, 4, 7);
         igraph_i_layout_merge_place_sphere(&grid, VECTOR(x)[i], VECTOR(y)[i],
                                            VECTOR(r)[nodes - i - 1], i);

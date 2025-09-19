@@ -1,4 +1,4 @@
-/* IGraph library.  Copyright (C) 2021  The igraph development team <igraph@igraph.org>
+/* igraph library.  Copyright (C) 2021  The igraph development team <igraph@igraph.org>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
 */
 
 #include <igraph.h>
-#include "test_utilities.inc"
+#include "test_utilities.h"
 
 void call_and_print(igraph_t *graph, int k, igraph_vector_t *weights, igraph_neimode_t mode) {
     igraph_vector_t result;
@@ -27,7 +27,7 @@ void call_and_print(igraph_t *graph, int k, igraph_vector_t *weights, igraph_nei
 }
 
 
-int main() {
+int main(void) {
     igraph_t g_0, g_1, g_lmu, g_lm, g_lm_nl;
     igraph_vector_t weights, result;
 
@@ -51,15 +51,28 @@ int main() {
     printf("Same graph, k=1:\n");
     call_and_print(&g_lm, 1, NULL, IGRAPH_IN);
 
+    printf("Same graph, k=1, IGRAPH_ALL:\n");
+    call_and_print(&g_lm, 1, NULL, IGRAPH_ALL);
+
     printf("Same graph, without loops, k=1:\n");
     call_and_print(&g_lm_nl, 1, NULL, IGRAPH_IN);
 
     printf("Same graph with loop, k=1, undirected:\n");
     call_and_print(&g_lmu, 1, NULL, IGRAPH_IN);
 
+    printf("Same graph, weighted:\n");
+    call_and_print(&g_lmu, 1, &weights, IGRAPH_IN);
+
     printf("Checking if calling igraph_local_scan_1_ecount properly redirects:\n");
     igraph_vector_clear(&result);
-    IGRAPH_ASSERT(igraph_local_scan_1_ecount(&g_lmu, &result, NULL, IGRAPH_IN) == IGRAPH_SUCCESS);
+    printf("Directed, IN: ");
+    IGRAPH_ASSERT(igraph_local_scan_1_ecount(&g_lm, &result, NULL, IGRAPH_IN) == IGRAPH_SUCCESS);
+    print_vector(&result);
+    printf("Directed, ALL: ");
+    IGRAPH_ASSERT(igraph_local_scan_1_ecount(&g_lm, &result, NULL, IGRAPH_ALL) == IGRAPH_SUCCESS);
+    print_vector(&result);
+    printf("Undirected, with weights: ");
+    IGRAPH_ASSERT(igraph_local_scan_1_ecount(&g_lmu, &result, &weights, IGRAPH_IN) == IGRAPH_SUCCESS);
     print_vector(&result);
     printf("\n");
 

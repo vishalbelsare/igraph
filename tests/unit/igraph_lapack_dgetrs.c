@@ -1,5 +1,5 @@
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2021  The igraph development team <igraph@igraph.org>
 
    This program is free software; you can redistribute it and/or modify
@@ -17,10 +17,10 @@
 */
 
 #include <igraph.h>
-#include "test_utilities.inc"
+#include "test_utilities.h"
 
 void check_and_destroy(igraph_matrix_t *a, igraph_matrix_t *b, igraph_vector_int_t *ipiv,
-                       igraph_bool_t transpose, igraph_error_type_t error) {
+                       igraph_bool_t transpose, igraph_error_t error) {
     printf("LU matrix:\n");
     igraph_matrix_print(a);
     printf("Pivot vector:\n");
@@ -38,7 +38,7 @@ void check_and_destroy(igraph_matrix_t *a, igraph_matrix_t *b, igraph_vector_int
     printf("\n");
 }
 
-int main() {
+int main(void) {
     igraph_matrix_t a, b;
     igraph_vector_int_t ipiv;
 
@@ -75,7 +75,7 @@ int main() {
         matrix_init_real_row_major(&a, 2, 3, a_elements);
         matrix_init_int_row_major(&b, 2, 1, b_elements);
         igraph_vector_int_init_int(&ipiv, 2, 2, 2);
-        check_and_destroy(&a, &b, &ipiv, 0, IGRAPH_NONSQUARE);
+        check_and_destroy(&a, &b, &ipiv, 0, IGRAPH_EINVAL);
     }
     {
         printf("Checking singular matrix, this gives random output, so we just check for memory problems.\n\n");

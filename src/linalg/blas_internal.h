@@ -1,7 +1,5 @@
-/* -*- mode: C -*-  */
-/* vim:set ts=4 sw=4 sts=4 et: */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2007-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard street, Cambridge, MA 02139 USA
 
@@ -29,8 +27,10 @@
    include this header.
 */
 
-#include "igraph_types.h"
-#include "config.h"
+#include "igraph_decls.h"
+#include "config.h" /* INTERNAL_BLAS */
+
+IGRAPH_BEGIN_C_DECLS
 
 #ifndef INTERNAL_BLAS
     #define igraphdaxpy_    daxpy_
@@ -63,9 +63,9 @@
  * Derived with "gfortran -fc-prototypes-external", applied on the original
  * Fortran sources of these functions. */
 
-void igraphdgemv_(char *trans, int *m, int *n, igraph_real_t *alpha,
-                 igraph_real_t *a, int *lda, igraph_real_t *x, int *incx,
-                 igraph_real_t *beta, igraph_real_t *y, int *incy, long int trans_len);
+void igraphdgemv_(char *trans, int *m, int *n, double *alpha,
+                 double *a, int *lda, double *x, int *incx,
+                 double *beta, double *y, int *incy, long int trans_len);
 
 void igraphdgemm_(char *transa, char *transb, int *m, int *n, int *k,
                  double *alpha, double *a, int *lda, double *b, int *ldb,
@@ -73,9 +73,9 @@ void igraphdgemm_(char *transa, char *transb, int *m, int *n, int *k,
 
 #else
 
-int igraphdgemv_(char *trans, int *m, int *n, igraph_real_t *alpha,
-                 igraph_real_t *a, int *lda, igraph_real_t *x, int *incx,
-                 igraph_real_t *beta, igraph_real_t *y, int *incy);
+int igraphdgemv_(char *trans, int *m, int *n, double *alpha,
+                 double *a, int *lda, double *x, int *incx,
+                 double *beta, double *y, int *incy);
 
 int igraphdgemm_(char *transa, char *transb, int *m, int *n, int *k,
                  double *alpha, double *a, int *lda, double *b, int *ldb,
@@ -86,5 +86,7 @@ int igraphdgemm_(char *transa, char *transb, int *m, int *n, int *k,
 double igraphdnrm2_(int *n, double *x, int *incx);
 
 double igraphddot_(int *n, double *dx, int *incx, double *dy, int *incy);
+
+IGRAPH_END_C_DECLS
 
 #endif

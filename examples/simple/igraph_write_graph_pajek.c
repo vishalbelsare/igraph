@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2006-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard st, Cambridge MA, 02139 USA
 
@@ -23,46 +22,48 @@
 
 #include <igraph.h>
 
-int main() {
-
+int main(void) {
     igraph_t g;
     igraph_strvector_t names;
+
+    /* Initialize the library. */
+    igraph_setup();
 
     igraph_set_attribute_table(&igraph_cattribute_table);
 
     /* save a simple ring graph */
-    igraph_ring(&g, 10, IGRAPH_DIRECTED, 0 /* mutual */, 1 /* circular */);
+    igraph_ring(&g, 10, IGRAPH_DIRECTED, false /* mutual */, true /* circular */);
     igraph_write_graph_pajek(&g, stdout);
 
     /* add some vertex attributes */
     igraph_strvector_init(&names, 0);
-    igraph_strvector_add(&names, "A");
-    igraph_strvector_add(&names, "B");
-    igraph_strvector_add(&names, "C");
-    igraph_strvector_add(&names, "D");
-    igraph_strvector_add(&names, "E");
-    igraph_strvector_add(&names, "F");
-    igraph_strvector_add(&names, "G");
-    igraph_strvector_add(&names, "H");
-    igraph_strvector_add(&names, "I");
-    igraph_strvector_add(&names, "J");
-    SETVASV(&g, "id", &names);
+    igraph_strvector_push_back(&names, "A");
+    igraph_strvector_push_back(&names, "B");
+    igraph_strvector_push_back(&names, "C");
+    igraph_strvector_push_back(&names, "D");
+    igraph_strvector_push_back(&names, "E");
+    igraph_strvector_push_back(&names, "F");
+    igraph_strvector_push_back(&names, "G");
+    igraph_strvector_push_back(&names, "H");
+    igraph_strvector_push_back(&names, "I");
+    igraph_strvector_push_back(&names, "J");
+    SETVASV(&g, "name", &names);
     igraph_strvector_destroy(&names);
 
     /* save the graph with vertex names */
     igraph_write_graph_pajek(&g, stdout);
 
     igraph_strvector_init(&names, 0);
-    igraph_strvector_add(&names, "square");
-    igraph_strvector_add(&names, "square");
-    igraph_strvector_add(&names, "square");
-    igraph_strvector_add(&names, "square");
-    igraph_strvector_add(&names, "escaping spaces");
-    igraph_strvector_add(&names, "square");
-    igraph_strvector_add(&names, "square");
-    igraph_strvector_add(&names, "escaping \\backslashes\\");
-    igraph_strvector_add(&names, "square");
-    igraph_strvector_add(&names, "escaping \"quotes\"");
+    igraph_strvector_push_back(&names, "square");
+    igraph_strvector_push_back(&names, "square");
+    igraph_strvector_push_back(&names, "square");
+    igraph_strvector_push_back(&names, "square");
+    igraph_strvector_push_back(&names, "escaping spaces");
+    igraph_strvector_push_back(&names, "square");
+    igraph_strvector_push_back(&names, "square");
+    igraph_strvector_push_back(&names, "escaping\nnewline");
+    igraph_strvector_push_back(&names, "square");
+    igraph_strvector_push_back(&names, "encoding \"quotes\"");
     SETVASV(&g, "shape", &names);
     igraph_strvector_destroy(&names);
 

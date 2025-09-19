@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2006-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard st, Cambridge MA, 02139 USA
 
@@ -24,17 +23,18 @@
 #include <igraph.h>
 #include <math.h>
 
-#include "test_utilities.inc"
+#include "test_utilities.h"
 
-int main() {
+int main(void) {
 
     igraph_t g;
     FILE *f;
     igraph_matrix_t coords;
-    /* long int i, n; */
+    /* igraph_int_t i, n; */
 
     f = fopen("igraph_layout_reingold_tilford_extended.in", "r");
-    igraph_read_graph_edgelist(&g, f, 0, 1);
+    IGRAPH_ASSERT(f != NULL);
+    igraph_read_graph_edgelist(&g, f, 0, IGRAPH_DIRECTED);
     igraph_matrix_init(&coords, 0, 0);
 
     igraph_layout_reingold_tilford(&g, &coords, IGRAPH_IN, 0, 0);

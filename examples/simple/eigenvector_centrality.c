@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2007-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard street, Cambridge, MA 02139 USA
 
@@ -21,65 +20,37 @@
 
 */
 
-#include "igraph.h"
+#include <igraph.h>
 
-#include <math.h>
+int main(void) {
 
-int main() {
-
-    igraph_t g;
-    igraph_vector_t v, weights;
-    long int i;
+    igraph_t graph;
+    igraph_vector_t vector, weights;
     igraph_real_t value;
-    igraph_arpack_options_t options;
 
-    igraph_star(&g, 100, IGRAPH_STAR_UNDIRECTED, 0);
+    /* Initialize the library. */
+    igraph_setup();
 
-    igraph_arpack_options_init(&options);
-    igraph_vector_init(&v, 0);
-    igraph_eigenvector_centrality(&g, &v, &value, /*directed=*/ 0,
-                                  /*scale=*/1, /*weights=*/0,
-                                  &options);
+    /* Create a star graph, with vertex 0 at the center, and associated edge weights. */
+    igraph_star(&graph, 10, IGRAPH_STAR_UNDIRECTED, 0);
+    igraph_vector_init_range(&weights, 1, igraph_ecount(&graph)+1);
 
-    if (options.info != 0) {
-        return 1;
-    }
+    /* Initialize the vector where the result will be stored. */
+    igraph_vector_init(&vector, 0);
 
-    for (i = 0; i < igraph_vector_size(&v); i++) {
-        printf(" %.4f", fabs(VECTOR(v)[i]));
-    }
-    printf("\n");
+    /* Compute eigenvector centrality. */
+    igraph_eigenvector_centrality(&graph, &vector, &value, IGRAPH_OUT,
+                                  &weights, /*options=*/ NULL);
 
-    igraph_destroy(&g);
+    /* Print results. */
+    printf("eigenvalue: %g\n", value);
+    printf("eigenvector:\n");
+    igraph_vector_print(&vector);
 
-    /* Special cases: check for empty graph */
-    igraph_empty(&g, 10, 0);
-    igraph_eigenvector_centrality(&g, &v, &value, 0, 0, 0, &options);
-    if (value != 0.0) {
-        return 1;
-    }
-    for (i = 0; i < igraph_vector_size(&v); i++) {
-        printf(" %.2f", fabs(VECTOR(v)[i]));
-    }
-    printf("\n");
-    igraph_destroy(&g);
-
-    /* Special cases: check for full graph, zero weights */
-    igraph_full(&g, 10, 0, 0);
-    igraph_vector_init(&weights, 45);
-    igraph_vector_fill(&weights, 0);
-    igraph_eigenvector_centrality(&g, &v, &value, 0, 0, &weights, &options);
+    /* Free allocated data structures. */
+    igraph_vector_destroy(&vector);
     igraph_vector_destroy(&weights);
-    if (value != 0.0) {
-        return 2;
-    }
-    for (i = 0; i < igraph_vector_size(&v); i++) {
-        printf(" %.2f", fabs(VECTOR(v)[i]));
-    }
-    printf("\n");
-    igraph_destroy(&g);
-
-    igraph_vector_destroy(&v);
+    igraph_destroy(&graph);
 
     return 0;
 }

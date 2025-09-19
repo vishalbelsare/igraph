@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2006-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard st, Cambridge MA, 02139 USA
 
@@ -23,19 +22,22 @@
 
 #include <igraph.h>
 
-int main() {
+int main(void) {
 
-    igraph_vector_t v;
+    igraph_vector_int_t v;
     igraph_t g;
 
-    igraph_vector_init_int(&v, 2, 5, 5);
-    igraph_lattice(&g, &v, 1, IGRAPH_DIRECTED, 1 /*mutual*/, 0 /*circular*/);
+    /* Initialize the library. */
+    igraph_setup();
+
+    igraph_vector_int_init_int(&v, 2, 5, 5);
+    igraph_square_lattice(&g, &v, 1, IGRAPH_DIRECTED, 1 /*mutual*/, 0 /*periodic*/);
     igraph_to_undirected(&g, IGRAPH_TO_UNDIRECTED_COLLAPSE,
                          /*edge_comb=*/ 0);
     igraph_write_graph_edgelist(&g, stdout);
 
     igraph_destroy(&g);
-    igraph_vector_destroy(&v);
+    igraph_vector_int_destroy(&v);
 
     printf("---\n");
 

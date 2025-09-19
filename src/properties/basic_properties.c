@@ -1,7 +1,5 @@
-/* -*- mode: C -*-  */
-/* vim:set ts=4 sw=4 sts=4 et: */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2005-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard street, Cambridge, MA 02139 USA
 
@@ -35,60 +33,128 @@
 
 /**
  * \function igraph_density
- * Calculate the density of a graph.
+ * \brief Calculate the density of a graph.
  *
- * </para><para>The density of a graph is simply the ratio number of
- * edges and the number of possible edges. Note that density is
- * ill-defined for graphs with multiple and/or loop edges, so consider
- * calling \ref igraph_simplify() on the graph if you know that it
- * contains multiple or loop edges.
- * \param graph The input graph object.
- * \param res Pointer to a real number, the result will be stored
- *   here.
- * \param loops Logical constant, whether to include loops in the
- *   calculation. If this constant is TRUE then
+ * The density of a graph is simply the ratio of the actual number of its
+ * edges and the largest possible number of edges it could have.
+ * The maximum number of edges depends on interpretation: are vertices
+ * allowed to have a connection to themselves? This is controlled by the
+ * \p loops parameter.
+ *
+ * </para><para>
+ * The classic definition of the density is formulated for unweighted
+ * graphs without multi-edges. This function allows multigraphs and
+ * weighted graphs as well. In this case, it computes the ratio of the
+ * total edge weight to the largest possible number of adjacent vertex
+ * pairs the graph could have. This value may be larger than 1.
+ *
+ * </para><para>
+ * If you need the density concept for simple graphs, make sure to
+ * eliminate any multi-edges appropriately. This can be done using
+ * \ref igraph_simplify().
+ *
+ * \param graph The input graph object. It must not have parallel edges.
+ * \param res Pointer to a real number, the result will be stored here.
+ * \param weights Vector of edge weights. Pass \c NULL to to perform
+ *   an unweighted density calculation.
+ * \param loops Boolean constant, whether to include self-loops in the
+ *   calculation. If this constant is \c true then
  *   loop edges are thought to be possible in the graph (this does not
  *   necessarily mean that the graph really contains any loops). If
- *   this is FALSE then the result is only correct if the graph does not
- *   contain loops.
+ *   this is \c false then the result is only correct if the graph does not
+ *   contain loops. This function does not check if loops are actually
+ *   present.
  * \return Error code.
  *
  * Time complexity: O(1).
  */
-int igraph_density(const igraph_t *graph, igraph_real_t *res,
-                   igraph_bool_t loops) {
+igraph_error_t igraph_density(
+        const igraph_t *graph,
+        const igraph_vector_t *weights,
+        igraph_real_t *res,
+        igraph_bool_t loops) {
 
-    igraph_integer_t no_of_nodes = igraph_vcount(graph);
-    igraph_real_t no_of_edges = igraph_ecount(graph);
+    const igraph_bool_t directed = igraph_is_directed(graph);
+    const igraph_int_t ecount = igraph_ecount(graph);
+    const igraph_real_t vcount = (igraph_real_t) igraph_vcount(graph); /* note real type */
+    igraph_real_t total_weight;
+
+    if (vcount == 0) {
+        *res = IGRAPH_NAN;
+        return IGRAPH_SUCCESS;
+    }
+
+    if (weights) {
+        if (igraph_vector_size(weights) != ecount) {
+            IGRAPH_ERROR("Weight vector length does not match edge count.", IGRAPH_EINVAL);
+        }
+        total_weight = igraph_vector_sum(weights);
+    } else {
+        total_weight = ecount;
+    }
+
+    if (!loops) {
+        if (vcount == 1) {
+            *res = IGRAPH_NAN;
+        } else if (directed) {
+            *res = total_weight / vcount / (vcount - 1);
+        } else {
+            *res = total_weight / vcount * 2.0 / (vcount - 1);
+        }
+    } else {
+        if (directed) {
+            *res = total_weight / vcount / vcount;
+        } else {
+            *res = total_weight / vcount * 2.0 / (vcount + 1);
+        }
+    }
+
+    return IGRAPH_SUCCESS;
+}
+
+/**
+ * \function igraph_mean_degree
+ * \brief The mean degree of a graph.
+ *
+ * This is a convenience function that computes the average of all vertex
+ * degrees. In directed graphs, the average of out-degrees and in-degrees is
+ * the same; this is the number that is returned. For the null graph, which
+ * has no vertices, NaN is returned.
+ *
+ * \param graph The input graph object.
+ * \param res Pointer to a real number, the result will be stored here.
+ * \param loops Whether to consider self-loops during the calculation.
+ * \return Error code.
+ *
+ * Time complexity: O(1) if self-loops are considered,
+ * O(|E|) where |E| is the number of edges if self-loops are ignored.
+ */
+igraph_error_t igraph_mean_degree(const igraph_t *graph, igraph_real_t *res,
+                                  igraph_bool_t loops) {
+
+    igraph_int_t no_of_nodes = igraph_vcount(graph);
+    igraph_int_t no_of_edges = igraph_ecount(graph);
     igraph_bool_t directed = igraph_is_directed(graph);
 
     if (no_of_nodes == 0) {
         *res = IGRAPH_NAN;
-        return 0;
+        return IGRAPH_SUCCESS;
     }
 
-    if (!loops) {
-        if (no_of_nodes == 1) {
-            *res = IGRAPH_NAN;
-        } else if (directed) {
-            *res = no_of_edges / no_of_nodes / (no_of_nodes - 1);
-        } else {
-            *res = no_of_edges / no_of_nodes * 2.0 / (no_of_nodes - 1);
-        }
-    } else {
-        if (directed) {
-            *res = no_of_edges / no_of_nodes / no_of_nodes;
-        } else {
-            *res = no_of_edges / no_of_nodes * 2.0 / (no_of_nodes + 1);
-        }
+    if (! loops) {
+        igraph_int_t loop_count;
+        IGRAPH_CHECK(igraph_count_loops(graph, &loop_count));
+        no_of_edges -= loop_count;
     }
 
-    return 0;
+    *res = (directed ? 1.0 : 2.0) * (igraph_real_t) no_of_edges / (igraph_real_t) no_of_nodes;
+
+    return IGRAPH_SUCCESS;
 }
 
 /**
  * \function igraph_diversity
- * Structural diversity index of the vertices
+ * \brief Structural diversity index of the vertices.
  *
  * This measure was defined in Nathan Eagle, Michael Macy and Rob
  * Claxton: Network Diversity and Economic Development, Science 328,
@@ -96,12 +162,16 @@ int igraph_density(const igraph_t *graph, igraph_real_t *res,
  *
  * </para><para>
  * It is simply the (normalized) Shannon entropy of the
- * incident edges' weights. D(i)=H(i)/log(k[i]), and
- * H(i) = -sum(p[i,j] log(p[i,j]), j=1..k[i]),
- * where p[i,j]=w[i,j]/sum(w[i,l], l=1..k[i]),  k[i] is the (total)
- * degree of vertex i, and w[i,j] is the weight of the edge(s) between
- * vertex i and j. The diversity of isolated vertices will be NaN
- * (not-a-number).
+ * incident edges' weights.
+ * <code>D(i) = H(i) / log(k[i])</code>,
+ * and
+ * <code>H(i) = -sum(p[i,j] log(p[i,j]), j=1..k[i])</code>,
+ * where <code>p[i,j] = w[i,j] / sum(w[i,l], l=1..k[i])</code>,
+ * <code>k[i]</code> is the (total) degree of vertex \c i,
+ * and <code>w[i,j]</code> is the weight of the edge(s) between
+ * vertex \c i and \c j. The diversity of isolated vertices will be NaN
+ * (not-a-number), while that of vertices with a single connection
+ * will be zero.
  *
  * </para><para>
  * The measure works only if the graph is undirected and has no multiple edges.
@@ -110,8 +180,8 @@ int igraph_density(const igraph_t *graph, igraph_real_t *res,
  * graph with \ref igraph_to_undirected() .
  *
  * \param graph The undirected input graph.
- * \param weights The edge weights, in the order of the edge ids, must
- *    have appropriate length.
+ * \param weights The edge weights, in the order of the edge IDs, must
+ *    have appropriate length. Weights must be non-negative.
  * \param res An initialized vector, the results are stored here.
  * \param vids Vertex selector that specifies the vertices which to calculate
  *    the measure.
@@ -120,16 +190,14 @@ int igraph_density(const igraph_t *graph, igraph_real_t *res,
  * Time complexity: O(|V|+|E|), linear.
  *
  */
-int igraph_diversity(igraph_t *graph, const igraph_vector_t *weights,
+igraph_error_t igraph_diversity(const igraph_t *graph, const igraph_vector_t *weights,
                      igraph_vector_t *res, const igraph_vs_t vids) {
 
-    int no_of_nodes = igraph_vcount(graph);
-    int no_of_edges = igraph_ecount(graph);
-    igraph_vector_t incident;
-    igraph_vit_t vit;
-    igraph_real_t s, ent, w;
-    int i, j, k;
+    igraph_int_t no_of_edges = igraph_ecount(graph);
+    igraph_int_t k, i;
+    igraph_vector_int_t incident;
     igraph_bool_t has_multiple;
+    igraph_vit_t vit;
 
     if (igraph_is_directed(graph)) {
         IGRAPH_ERROR("Diversity measure works with undirected graphs only.", IGRAPH_EINVAL);
@@ -148,48 +216,65 @@ int igraph_diversity(igraph_t *graph, const igraph_vector_t *weights,
         IGRAPH_ERROR("Diversity measure works only if the graph has no multiple edges.", IGRAPH_EINVAL);
     }
 
-    IGRAPH_VECTOR_INIT_FINALLY(&incident, 10);
-
-    if (igraph_vs_is_all(&vids)) {
-        IGRAPH_CHECK(igraph_vector_resize(res, no_of_nodes));
-        for (i = 0; i < no_of_nodes; i++) {
-            s = ent = 0.0;
-            IGRAPH_CHECK(igraph_incident(graph, &incident, i, /*mode=*/ IGRAPH_ALL));
-            for (j = 0, k = (int) igraph_vector_size(&incident); j < k; j++) {
-                w = VECTOR(*weights)[(long int)VECTOR(incident)[j]];
-                s += w;
-                ent += (w * log(w));
-            }
-            VECTOR(*res)[i] = (log(s) - ent / s) / log(k);
+    if (no_of_edges > 0) {
+        igraph_real_t minweight = igraph_vector_min(weights);
+        if (minweight < 0) {
+            IGRAPH_ERROR("Weight vector must be non-negative.", IGRAPH_EINVAL);
+        } else if (isnan(minweight)) {
+            IGRAPH_ERROR("Weight vector must not contain NaN values.", IGRAPH_EINVAL);
         }
-    } else {
-        IGRAPH_CHECK(igraph_vector_resize(res, 0));
-        IGRAPH_CHECK(igraph_vit_create(graph, vids, &vit));
-        IGRAPH_FINALLY(igraph_vit_destroy, &vit);
-
-        for (IGRAPH_VIT_RESET(vit), i = 0;
-             !IGRAPH_VIT_END(vit);
-             IGRAPH_VIT_NEXT(vit), i++) {
-            long int v = IGRAPH_VIT_GET(vit);
-            s = ent = 0.0;
-            IGRAPH_CHECK(igraph_incident(graph, &incident, (igraph_integer_t) v,
-                                         /*mode=*/ IGRAPH_ALL));
-            for (j = 0, k = (int) igraph_vector_size(&incident); j < k; j++) {
-                w = VECTOR(*weights)[(long int)VECTOR(incident)[j]];
-                s += w;
-                ent += (w * log(w));
-            }
-            IGRAPH_CHECK(igraph_vector_push_back(res, (log(s) - ent / s) / log(k)));
-        }
-
-        igraph_vit_destroy(&vit);
-        IGRAPH_FINALLY_CLEAN(1);
     }
 
-    igraph_vector_destroy(&incident);
-    IGRAPH_FINALLY_CLEAN(1);
+    IGRAPH_VECTOR_INT_INIT_FINALLY(&incident, 10);
 
-    return 0;
+    IGRAPH_CHECK(igraph_vit_create(graph, vids, &vit));
+    IGRAPH_FINALLY(igraph_vit_destroy, &vit);
+
+    igraph_vector_clear(res);
+    IGRAPH_CHECK(igraph_vector_reserve(res, IGRAPH_VIT_SIZE(vit)));
+
+    for (IGRAPH_VIT_RESET(vit); !IGRAPH_VIT_END(vit); IGRAPH_VIT_NEXT(vit)) {
+        igraph_real_t d;
+        igraph_int_t v = IGRAPH_VIT_GET(vit);
+
+        IGRAPH_CHECK(igraph_incident(graph, &incident, v, IGRAPH_ALL, IGRAPH_LOOPS));
+        k = igraph_vector_int_size(&incident); /* degree */
+
+        /*
+         * Non-normalized diversity is defined as
+         * d = -sum_i w_i/s log (w_i/s)
+         * where s = sum_i w_i. In order to avoid two passes through the w vector,
+         * we use the equivalent formulation of
+         * d = log s - (sum_i w_i log w_i) / s
+         * However, this formulation may not give an exact 0.0 for some w when k=1,
+         * due to roundoff errors (examples: w=3 or w=7). For this reason, we
+         * special-case the computation for k=1 even for the unnormalized diversity
+         * insted of just setting the normalization factor to 1 for this case.
+         */
+        if (k == 0) {
+            d = IGRAPH_NAN;
+        } else if (k == 1) {
+            if (VECTOR(*weights)[0] > 0) d = 0.0; /* s > 0 */
+            else d = IGRAPH_NAN; /* s == 0 */
+        } else {
+            igraph_real_t s = 0.0, ent = 0.0;
+            for (i = 0; i < k; i++) {
+                igraph_real_t w = VECTOR(*weights)[VECTOR(incident)[i]];
+                if (w == 0) continue;
+                s += w;
+                ent += (w * log(w));
+            }
+            d = (log(s) - ent / s) / log(k);
+        }
+
+        igraph_vector_push_back(res, d); /* reserved */
+    }
+
+    igraph_vit_destroy(&vit);
+    igraph_vector_int_destroy(&incident);
+    IGRAPH_FINALLY_CLEAN(2);
+
+    return IGRAPH_SUCCESS;
 }
 
 /**
@@ -197,31 +282,33 @@ int igraph_diversity(igraph_t *graph, const igraph_vector_t *weights,
  * \function igraph_reciprocity
  * \brief Calculates the reciprocity of a directed graph.
  *
- * </para><para>
- * The measure of reciprocity defines the proportion of mutual
- * connections, in a directed graph. It is most commonly defined as
- * the probability that the opposite counterpart of a directed edge is
- * also included in the graph. In adjacency matrix notation:
- * <code>sum(i, j, (A.*A')ij) / sum(i, j, Aij)</code>, where
- * <code>A.*A'</code> is the element-wise product of matrix
- * <code>A</code> and its transpose. This measure is
- * calculated if the \p mode argument is \c
- * IGRAPH_RECIPROCITY_DEFAULT.
+ * In a directed graph, the measure of reciprocity defines the proportion of
+ * mutual connections. It is most commonly defined as the probability that the
+ * opposite counterpart of a randomly chosen directed edge is also included in
+ * the graph. In adjacency matrix notation:
+ * <code>1 - (sum_ij |A_ij - A_ji|) / (2 sum_ij A_ij)</code>.
+ * In multigraphs, each parallel edge between two vertices must have its own
+ * separate reciprocal edge, in accordance with the above formula. This measure
+ * is calculated if the \p mode argument is \c IGRAPH_RECIPROCITY_DEFAULT.
  *
  * </para><para>
- * Prior to igraph version 0.6, another measure was implemented,
- * defined as the probability of mutual connection between a vertex
- * pair if we know that there is a (possibly non-mutual) connection
- * between them. In other words, (unordered) vertex pairs are
- * classified into three groups: (1) disconnected, (2)
- * non-reciprocally connected, (3) reciprocally connected.
+ * For directed graphs with no edges, NaN is returned.
+ * For undirected graphs, 1 is returned unconditionally.
+ *
+ * </para><para>
+ * Prior to igraph version 0.6, another measure was implemented, defined as the
+ * probability of having mutual connections between a vertex pair if we know
+ * that there is a (possibly non-mutual) connection between them. In other
+ * words, (unordered) vertex pairs are classified into three groups:
+ * (1) disconnected, (2) non-reciprocally connected, (3) reciprocally connected.
  * The result is the size of group (3), divided by the sum of group
- * sizes (2)+(3). This measure is calculated if \p mode is \c
- * IGRAPH_RECIPROCITY_RATIO.
+ * sizes (2)+(3). This measure is calculated if \p mode is
+ * \c IGRAPH_RECIPROCITY_RATIO.
  *
  * \param graph The graph object.
  * \param res Pointer to an \c igraph_real_t which will contain the result.
- * \param ignore_loops Whether to ignore loop edges.
+ * \param ignore_loops Whether to ignore self-loops when counting edges.
+ *    Self-loops are considered as a mutual connection.
  * \param mode Type of reciprocity to calculate, possible values are
  *    \c IGRAPH_RECIPROCITY_DEFAULT and \c IGRAPH_RECIPROCITY_RATIO,
  *    please see their description above.
@@ -235,37 +322,42 @@ int igraph_diversity(igraph_t *graph, const igraph_vector_t *weights,
  *
  * \example examples/simple/igraph_reciprocity.c
  */
-int igraph_reciprocity(const igraph_t *graph, igraph_real_t *res,
+igraph_error_t igraph_reciprocity(const igraph_t *graph, igraph_real_t *res,
                        igraph_bool_t ignore_loops,
                        igraph_reciprocity_t mode) {
 
-    igraph_integer_t nonrec = 0, rec = 0, loops = 0;
-    igraph_vector_t inneis, outneis;
-    long int i;
-    long int no_of_nodes = igraph_vcount(graph);
+    igraph_int_t nonrec = 0, rec = 0, loops = 0;
+    igraph_vector_int_t inneis, outneis;
+    igraph_int_t no_of_nodes = igraph_vcount(graph);
 
     if (mode != IGRAPH_RECIPROCITY_DEFAULT &&
         mode != IGRAPH_RECIPROCITY_RATIO) {
-        IGRAPH_ERROR("Invalid reciprocity type", IGRAPH_EINVAL);
+        IGRAPH_ERROR("Invalid reciprocity type.", IGRAPH_EINVAL);
     }
 
-    /* THIS IS AN EXIT HERE !!!!!!!!!!!!!! */
+    /* Undirected graphs have reciprocity 1.0 by definition. */
     if (!igraph_is_directed(graph)) {
         *res = 1.0;
-        return 0;
+        return IGRAPH_SUCCESS;
     }
 
-    IGRAPH_VECTOR_INIT_FINALLY(&inneis, 0);
-    IGRAPH_VECTOR_INIT_FINALLY(&outneis, 0);
+    IGRAPH_VECTOR_INT_INIT_FINALLY(&inneis, 0);
+    IGRAPH_VECTOR_INT_INIT_FINALLY(&outneis, 0);
 
-    for (i = 0; i < no_of_nodes; i++) {
-        long int ip, op;
-        igraph_neighbors(graph, &inneis, (igraph_integer_t) i, IGRAPH_IN);
-        igraph_neighbors(graph, &outneis, (igraph_integer_t) i, IGRAPH_OUT);
+    for (igraph_int_t i = 0; i < no_of_nodes; i++) {
+        igraph_int_t ip, op, indeg, outdeg;
+        IGRAPH_CHECK(igraph_neighbors(
+            graph, &inneis, i, IGRAPH_IN, IGRAPH_LOOPS_ONCE, IGRAPH_MULTIPLE
+        ));
+        IGRAPH_CHECK(igraph_neighbors(
+            graph, &outneis, i, IGRAPH_OUT, IGRAPH_LOOPS_ONCE, IGRAPH_MULTIPLE
+        ));
+
+        indeg = igraph_vector_int_size(&inneis);
+        outdeg = igraph_vector_int_size(&outneis);
 
         ip = op = 0;
-        while (ip < igraph_vector_size(&inneis) &&
-               op < igraph_vector_size(&outneis)) {
+        while (ip < indeg && op < outdeg) {
             if (VECTOR(inneis)[ip] < VECTOR(outneis)[op]) {
                 nonrec += 1;
                 ip++;
@@ -288,8 +380,12 @@ int igraph_reciprocity(const igraph_t *graph, igraph_real_t *res,
                 op++;
             }
         }
-        nonrec += (igraph_vector_size(&inneis) - ip) +
-                  (igraph_vector_size(&outneis) - op);
+        nonrec += (indeg - ip) + (outdeg - op);
+    }
+
+    /* If we found non-loop mutual connections, we can set the cache. */
+    if (rec - (ignore_loops ? 0 : loops) > 0) {
+        igraph_i_property_cache_set_bool_checked(graph, IGRAPH_PROP_HAS_MUTUAL, true);
     }
 
     if (mode == IGRAPH_RECIPROCITY_DEFAULT) {
@@ -302,8 +398,9 @@ int igraph_reciprocity(const igraph_t *graph, igraph_real_t *res,
         *res = (igraph_real_t) rec / (rec + nonrec);
     }
 
-    igraph_vector_destroy(&inneis);
-    igraph_vector_destroy(&outneis);
+    igraph_vector_int_destroy(&inneis);
+    igraph_vector_int_destroy(&outneis);
     IGRAPH_FINALLY_CLEAN(2);
-    return 0;
+
+    return IGRAPH_SUCCESS;
 }

@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2007-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard st, Cambridge, MA, 02138 USA
 
@@ -67,7 +66,7 @@ namespace walktrap {
 class Edge {            // code an edge of a given vertex
 public:
     int neighbor;         // the number of the neighbor vertex
-    float weight;         // the weight of the edge
+    double weight;         // the weight of the edge
 };
 bool operator<(const Edge& E1, const Edge& E2);
 
@@ -76,7 +75,7 @@ class Vertex {
 public:
     Edge* edges;          // the edges of the vertex
     int degree;           // number of neighbors
-    float total_weight;       // the total weight of the vertex
+    double total_weight;       // the total weight of the vertex
 
     Vertex();         // creates empty vertex
     ~Vertex();            // destructor
@@ -86,16 +85,13 @@ class Graph {
 public:
     int nb_vertices;      // number of vertices
     int nb_edges;         // number of edges
-    float total_weight;       // total weight of the edges
+    double total_weight;       // total weight of the edges
     Vertex* vertices;     // array of the vertices
 
-    long memory();            // the total memory used in Bytes
     Graph();          // create an empty graph
     ~Graph();         // destructor
-    char** index;         // to keep the real name of the vertices
 
-    int convert_from_igraph(const igraph_t * igraph,
-                            const igraph_vector_t *weights);
+    igraph_error_t convert_from_igraph(const igraph_t *igraph, const igraph_vector_t *weights);
 };
 
 }

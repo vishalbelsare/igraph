@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2006-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard street, Cambridge, MA 02139 USA
 
@@ -23,10 +22,12 @@
 
 #include <igraph.h>
 
-int main() {
+int main(void) {
 
     igraph_dqueue_t q;
-    int i;
+
+    /* Initialize the library. */
+    igraph_setup();
 
     /* igraph_dqueue_init, igraph_dqueue_destroy, igraph_dqueue_empty */
     igraph_dqueue_init(&q, 5);
@@ -64,7 +65,7 @@ int main() {
     if (igraph_dqueue_size(&q) != 0) {
         return 7;
     }
-    for (i = 0; i < 10; i++) {
+    for (int i = 0; i < 10; i++) {
         igraph_dqueue_push(&q, i);
     }
     igraph_dqueue_clear(&q);
@@ -77,10 +78,10 @@ int main() {
 
     /* igraph_dqueue_head, igraph_dqueue_back, igraph_dqueue_pop_back */
     igraph_dqueue_init(&q, 0);
-    for (i = 0; i < 10; i++) {
+    for (int i = 0; i < 10; i++) {
         igraph_dqueue_push(&q, i);
     }
-    for (i = 0; i < 10; i++) {
+    for (int i = 0; i < 10; i++) {
         if (igraph_dqueue_head(&q) != 0) {
             return 9;
         }

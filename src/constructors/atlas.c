@@ -1,8 +1,6 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph R package.
-   Copyright (C) 2006-2012  Gabor Csardi <csardi.gabor@gmail.com>
-   334 Harvard street, Cambridge, MA 02139 USA
+   igraph library.
+   Copyright (C) 2006-2025  The igraph development team <igraph@igraph.org>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -15,10 +13,7 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
-   02110-1301 USA
-
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include "igraph_constructors.h"
@@ -29,54 +24,64 @@
  * \function igraph_atlas
  * \brief Create a small graph from the \quote Graph Atlas \endquote.
  *
- * </para><para>
- * The number of the graph is given as a parameter.
- * The graphs are listed: \olist
- *      \oli in increasing order of number of nodes;
- *      \oli for a fixed number of nodes, in increasing order of the
+ * The graph atlas contains all simple undirected unlabeled graphs on between
+ * 0 and 7 vertices. The number of the graph is given as a parameter.
+ * The graphs are listed:
+ *      \olist
+ *      \oli in increasing order of number of vertices;
+ *      \oli for a fixed number of vertices, in increasing order of the
  *           number of edges;
- *      \oli for fixed numbers of nodes and edges, in increasing
- *           order of the degree sequence, for example 111223 &lt; 112222;
+ *      \oli for fixed numbers of vertices and edges, in lexicographically
+ *           increasing order of the degree sequence, for example
+ *           111223 &lt; 112222;
  *      \oli for fixed degree sequence, in increasing number of
  *           automorphisms.
  *      \endolist
  *
  * </para><para>
  * The data was converted from the NetworkX software package,
- * see http://networkx.github.io .
+ * see https://networkx.org/.
  *
  * </para><para>
  * See \emb An Atlas of Graphs \eme by Ronald C. Read and Robin J. Wilson,
  * Oxford University Press, 1998.
  *
  * \param graph Pointer to an uninitialized graph object.
- * \param number The number of the graph to generate.
+ * \param number The number of the graph to generate. Must be between 0 and
+ *    1252 (inclusive). Graphs on 0-7 vertices start at numbers 0, 1, 2, 4,
+ *    8, 19, 53, and 209, respectively.
+ * \return Error code.
  *
- * Added in version 0.2.</para><para>
+ * Added in version 0.2.
  *
+ * </para><para>
  * Time complexity: O(|V|+|E|), the number of vertices plus the number of
  * edges.
  *
  * \example examples/simple/igraph_atlas.c
  */
-int igraph_atlas(igraph_t *graph, int number) {
+igraph_error_t igraph_atlas(igraph_t *graph, igraph_int_t number) {
 
-    igraph_integer_t pos, n, e;
-    igraph_vector_t v = IGRAPH_VECTOR_NULL;
+    const igraph_int_t atlas_size =
+        sizeof(igraph_i_atlas_edges_pos) / sizeof(igraph_i_atlas_edges_pos[0]);
 
     if (number < 0 ||
-        number >= (int) (sizeof(igraph_i_atlas_edges_pos) / sizeof(long int))) {
-        IGRAPH_ERROR("No such graph in atlas", IGRAPH_EINVAL);
+        number >= atlas_size) {
+        IGRAPH_ERRORF("No such graph in atlas. "
+                      "The graph index must be less than %" IGRAPH_PRId ".",
+                      IGRAPH_EINVAL,
+                      atlas_size);
     }
 
-    pos = (igraph_integer_t) igraph_i_atlas_edges_pos[number];
-    n = (igraph_integer_t) igraph_i_atlas_edges[pos];
-    e = (igraph_integer_t) igraph_i_atlas_edges[pos + 1];
+    igraph_int_t pos = igraph_i_atlas_edges_pos[number];
+    igraph_int_t n = igraph_i_atlas_edges[pos];
+    igraph_int_t e = igraph_i_atlas_edges[pos + 1];
+    const igraph_vector_int_t edges = igraph_vector_int_view(igraph_i_atlas_edges + pos + 2, e * 2);
 
     IGRAPH_CHECK(igraph_create(graph,
-                               igraph_vector_view(&v, igraph_i_atlas_edges + pos + 2,
-                                       e * 2),
-                               n, IGRAPH_UNDIRECTED));
+                               &edges,
+                               n,
+                               IGRAPH_UNDIRECTED));
 
-    return 0;
+    return IGRAPH_SUCCESS;
 }

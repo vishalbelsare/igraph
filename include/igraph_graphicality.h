@@ -1,8 +1,6 @@
-/* -*- mode: C -*-  */
-/* vim:set ts=4 sw=4 sts=4 et: */
 /*
-   IGraph library.
-   Copyright (C) 2009-2020  Gabor Csardi <csardi.gabor@gmail.com>
+   igraph library.
+   Copyright (C) 2020-2025  The igraph development team <igraph@igraph.org>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -22,11 +20,30 @@
 #define IGRAPH_GRAPHICALITY_H
 
 #include "igraph_decls.h"
-#include "igraph_datatype.h"
+#include "igraph_error.h"
+#include "igraph_vector.h"
 
-__BEGIN_DECLS
+IGRAPH_BEGIN_C_DECLS
 
-typedef unsigned char igraph_edge_type_sw_t;
+/**
+ * \typedef igraph_edge_type_sw_t
+ * \brief What types of non-simple edges to allow?
+ *
+ * This type is used with multiple functions to specify what types of non-simple
+ * edges to allow, create or consider a graph. The constants below are treated
+ * as "switches" that can be turned on individually and combined using the
+ * bitwise-or operator. For example,
+ * <code>IGRAPH_LOOPS_SW</code>
+ * allows only self-loops but not multi-edges, while
+ * <code>IGRAPH_LOOPS_SW | IGRAPH_MULTI_SW</code>
+ * allows both.
+ *
+ * \enumval IGRAPH_SIMPLE_SW A shorthand for simple graphs only, which is the default
+ *    assumption.
+ * \enumval IGRAPH_LOOPS_SW Allow or consider self-loops.
+ * \enumval IGRAPH_MULTI_SW Allow or consider multi-edges.
+ */
+typedef unsigned int igraph_edge_type_sw_t;
 
 /*
  * bit 0: self-loops alowed?
@@ -39,27 +56,16 @@ enum {
   IGRAPH_MULTI_SW  = 0x06  /* 110 */
 };
 
-IGRAPH_EXPORT int igraph_is_graphical(const igraph_vector_t *out_degrees,
-                                      const igraph_vector_t *in_degrees,
-                                      const igraph_edge_type_sw_t allowed_edge_types,
+IGRAPH_EXPORT igraph_error_t igraph_is_graphical(const igraph_vector_int_t *out_degrees,
+                                      const igraph_vector_int_t *in_degrees,
+                                      igraph_edge_type_sw_t allowed_edge_types,
                                       igraph_bool_t *res);
 
-IGRAPH_EXPORT int igraph_is_bigraphical(const igraph_vector_t *degrees1,
-                                        const igraph_vector_t *degrees2,
-                                        const igraph_edge_type_sw_t allowed_edge_types,
+IGRAPH_EXPORT igraph_error_t igraph_is_bigraphical(const igraph_vector_int_t *degrees1,
+                                        const igraph_vector_int_t *degrees2,
+                                        igraph_edge_type_sw_t allowed_edge_types,
                                         igraph_bool_t *res);
 
-
-/* Legacy functions (deprecated): */
-
-IGRAPH_EXPORT IGRAPH_DEPRECATED int igraph_is_degree_sequence(const igraph_vector_t *out_degrees,
-                                                              const igraph_vector_t *in_degrees,
-                                                              igraph_bool_t *res);
-
-IGRAPH_EXPORT IGRAPH_DEPRECATED int igraph_is_graphical_degree_sequence(const igraph_vector_t *out_degrees,
-                                                                        const igraph_vector_t *in_degrees,
-                                                                        igraph_bool_t *res);
-
-__END_DECLS
+IGRAPH_END_C_DECLS
 
 #endif // IGRAPH_GRAPHICALITY_H

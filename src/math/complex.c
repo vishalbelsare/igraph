@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2010-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard street, Cambridge, MA 02139 USA
 
@@ -22,7 +21,7 @@
 */
 
 #include "igraph_complex.h"
-#include "core/math.h"
+
 #include <math.h>
 
 /**
@@ -41,22 +40,6 @@ igraph_complex_t igraph_complex_polar(igraph_real_t r, igraph_real_t theta) {
     IGRAPH_REAL(res) = r * cos(theta);
     IGRAPH_IMAG(res) = r * sin(theta);
     return res;
-}
-
-igraph_bool_t igraph_complex_eq_tol(igraph_complex_t z1,
-                                    igraph_complex_t z2,
-                                    igraph_real_t tol) {
-    if (fabs(IGRAPH_REAL(z1) - IGRAPH_REAL(z2)) > tol ||
-        fabs(IGRAPH_IMAG(z1) - IGRAPH_IMAG(z2)) > tol) {
-        return 0;
-    }
-    return 1;
-}
-
-igraph_real_t igraph_complex_mod(igraph_complex_t z) {
-    igraph_real_t x = IGRAPH_REAL(z);
-    igraph_real_t y = IGRAPH_IMAG(z);
-    return hypot(x, y);
 }
 
 igraph_real_t igraph_complex_arg(igraph_complex_t z) {
@@ -194,6 +177,7 @@ igraph_complex_t igraph_complex_inv(igraph_complex_t z) {
 }
 
 igraph_real_t igraph_complex_abs(igraph_complex_t z) {
+    /* hypot() avoids overflow at intermediate stages of the calculation */
     return hypot(IGRAPH_REAL(z), IGRAPH_IMAG(z));
 }
 

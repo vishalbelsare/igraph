@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard st, Cambridge MA, USA 02139
 
@@ -23,12 +22,12 @@
 
 #include <igraph.h>
 
-#include "test_utilities.inc"
+#include "test_utilities.h"
 
-int main() {
+int main(void) {
     igraph_vector_t v;
 
-    igraph_vector_init_seq(&v, 1, 1000);
+    igraph_vector_init_range(&v, 1, 1001);
     IGRAPH_ASSERT(igraph_vector_capacity(&v) == 1000);
 
     igraph_vector_push_back(&v, 1001);
@@ -40,7 +39,7 @@ int main() {
     igraph_vector_destroy(&v);
 
     /* regression test for #1479 -- calling resize_min() on an empty vector */
-    igraph_vector_init_seq(&v, 1, 1000);
+    igraph_vector_init_range(&v, 1, 1001);
     igraph_vector_clear(&v);
     igraph_vector_resize_min(&v);
     IGRAPH_ASSERT(igraph_vector_capacity(&v) == 0);

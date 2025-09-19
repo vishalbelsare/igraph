@@ -1,5 +1,5 @@
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2021  The igraph development team <igraph@igraph.org>
 
    This program is free software; you can redistribute it and/or modify
@@ -18,15 +18,15 @@
 
 #include <igraph.h>
 
-#include "test_utilities.inc"
+#include "test_utilities.h"
 
-int main() {
+int main(void) {
 
     igraph_heap_t h_max;
     igraph_heap_min_t h_min;
-    igraph_integer_t i;
+    igraph_int_t i;
     igraph_real_t list[] = {-2, -9.999, 0, 6, 235, -2, -1000, -1, 4, 2000, 6, 0.5, 1, -9, 10};
-    const igraph_integer_t l_size = sizeof(list) / sizeof(igraph_real_t);
+    const igraph_int_t l_size = sizeof(list) / sizeof(list[0]);
 
     /* max heap init & destroy*/
     printf("Create empty max heap & destroy\n");
@@ -130,6 +130,14 @@ int main() {
 
     igraph_heap_destroy(&h_max);
     igraph_heap_min_destroy(&h_min);
+
+    /* Test initializing empty heap from array. */
+    igraph_heap_init_array(&h_max, list, 0);
+    IGRAPH_ASSERT(igraph_heap_empty(&h_max));
+    igraph_heap_push(&h_max, 3.0);
+    IGRAPH_ASSERT(! igraph_heap_empty(&h_max));
+    IGRAPH_ASSERT(igraph_heap_top(&h_max) == 3.0);
+    igraph_heap_destroy(&h_max);
 
     VERIFY_FINALLY_STACK();
 

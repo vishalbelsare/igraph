@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2010-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard street, Cambridge, MA 02139 USA
 
@@ -24,26 +23,27 @@
 #include <igraph.h>
 #include <limits.h>
 
-int main() {
+int main(void) {
 
     igraph_t g, gbar;
-    igraph_integer_t k1, k2 = (igraph_integer_t) INT_MAX;
+    igraph_int_t k1, k2 = INT_MAX;
     igraph_real_t tmpk;
-    long int i, j, n;
+    igraph_int_t i, j, n;
     igraph_maxflow_stats_t stats;
 
-    /* --------------------------------------------------- */
+    /* Initialize the library. */
+    igraph_setup();
 
     igraph_famous(&g, "meredith");
-    igraph_even_tarjan_reduction(&g, &gbar, /*capacity=*/ 0);
+    igraph_even_tarjan_reduction(&g, &gbar, /*capacity=*/ NULL);
 
-    igraph_vertex_connectivity(&g, &k1, /* checks= */ 0);
+    igraph_vertex_connectivity(&g, &k1, /* checks= */ false);
 
     n = igraph_vcount(&g);
     for (i = 0; i < n; i++) {
         for (j = i + 1; j < n; j++) {
             igraph_bool_t conn;
-            igraph_are_connected(&g, i, j, &conn);
+            igraph_are_adjacent(&g, i, j, &conn);
             if (conn) {
                 continue;
             }
@@ -62,7 +62,7 @@ int main() {
     igraph_destroy(&g);
 
     if (k1 != k2) {
-        printf("k1 = %ld while k2 = %ld\n", (long int) k1, (long int) k2);
+        printf("k1 = %" IGRAPH_PRId " while k2 = %" IGRAPH_PRId "\n", k1, k2);
         return 1;
     }
 

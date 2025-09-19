@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2006-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard st, Cambridge MA, 02139 USA
 
@@ -25,11 +24,11 @@
 
 #include "core/cutheap.h"
 
-#include "test_utilities.inc"
+#include "test_utilities.h"
 
-int main() {
+int main(void) {
     igraph_i_cutheap_t ch;
-    long int i;
+    igraph_int_t i;
 
     igraph_i_cutheap_init(&ch, 10);
 
@@ -37,8 +36,8 @@ int main() {
         igraph_i_cutheap_update(&ch, i, i);
     }
     while (!igraph_i_cutheap_empty(&ch)) {
-        long int idx = igraph_i_cutheap_popmax(&ch);
-        printf("%li ", idx);
+        igraph_int_t idx = igraph_i_cutheap_popmax(&ch);
+        printf("%" IGRAPH_PRId " ", idx);
     }
     printf("\n");
 

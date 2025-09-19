@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2007-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard st, Cambridge MA, 02139 USA
 
@@ -23,15 +22,18 @@
 
 #include <igraph.h>
 
-int main() {
+int main(void) {
     igraph_t g;
-    igraph_integer_t girth;
-    igraph_vector_t v;
-    igraph_vector_t circle;
-    igraph_real_t chord[] = { 0, 50 };
+    igraph_real_t girth;
+    igraph_vector_int_t circle;
+    igraph_int_t chord[] = { 0, 50 };
+    const igraph_vector_int_t v = igraph_vector_int_view(chord, sizeof(chord) / sizeof(chord[0]));
+
+    /* Initialize the library. */
+    igraph_setup();
 
     igraph_ring(&g, 100, IGRAPH_UNDIRECTED, 0, 1);
-    igraph_vector_view(&v, chord, sizeof(chord) / sizeof(igraph_real_t));
+
     igraph_add_edges(&g, &v, 0);
     igraph_girth(&g, &girth, 0);
     if (girth != 51) {
@@ -42,16 +44,16 @@ int main() {
 
     /* Special case: null graph */
     igraph_ring(&g, 0, IGRAPH_UNDIRECTED, 0, 1);
-    igraph_vector_init(&circle, 1);
+    igraph_vector_int_init(&circle, 1);
     VECTOR(circle)[0] = 2;
     igraph_girth(&g, &girth, &circle);
-    if (girth != 0) {
+    if (girth != IGRAPH_INFINITY) {
         return 2;
     }
-    if (igraph_vector_size(&circle) != 0) {
+    if (igraph_vector_int_size(&circle) != 0) {
         return 3;
     }
-    igraph_vector_destroy(&circle);
+    igraph_vector_int_destroy(&circle);
     igraph_destroy(&g);
 
     return 0;

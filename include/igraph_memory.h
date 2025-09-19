@@ -1,8 +1,6 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
-   Copyright (C) 2003-2012  Gabor Csardi <csardi.gabor@gmail.com>
-   334 Harvard street, Cambridge, MA 02139 USA
+   igraph library.
+   Copyright (C) 2003-2025  The igraph development team <igraph@igraph.org>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -15,31 +13,33 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc.,  51 Franklin Street, Fifth Floor, Boston, MA
-   02110-1301 USA
-
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #ifndef IGRAPH_MEMORY_H
 #define IGRAPH_MEMORY_H
 
-#include <stdlib.h>
 #include "igraph_decls.h"
 
-__BEGIN_DECLS
+#include <stdint.h>
+#include <stdlib.h>
 
-#define IGRAPH_CALLOC(n,t)    (t*) calloc( (n) > 0 ? (size_t)(n) : (size_t)1, sizeof(t) )
-#define IGRAPH_REALLOC(p,n,t) (t*) realloc((void*)(p), (n) > 0 ? (size_t)((n)*sizeof(t)) : (size_t)1)
+IGRAPH_BEGIN_C_DECLS
+
+/* Helper macro to check if n*sizeof(t) overflows in IGRAPH_CALLOC and IGRAPH_REALLOC */
+#define IGRAPH_I_ALLOC_CHECK_OVERFLOW(n,t,expr) \
+    (t*) ((0 <= (n) && ((size_t)(n)) <= SIZE_MAX / sizeof(t)) ? (expr) : NULL)
+
+#define IGRAPH_CALLOC(n,t)    IGRAPH_I_ALLOC_CHECK_OVERFLOW(n, t, calloc(sizeof(t) * ((n) > 0 ? (n) : 1), 1))
+#define IGRAPH_MALLOC(n)      malloc( (size_t) ((n) > 0 ? (n) : 1) )
+#define IGRAPH_REALLOC(p,n,t) IGRAPH_I_ALLOC_CHECK_OVERFLOW(n, t, realloc((void*)(p), sizeof(t) * ((n) > 0 ? (n) : 1)))
 #define IGRAPH_FREE(p)        (free( (void *)(p) ), (p) = NULL)
 
-#define igraph_Calloc IGRAPH_CALLOC
-#define igraph_Realloc IGRAPH_REALLOC
-#define igraph_Free IGRAPH_FREE
+IGRAPH_EXPORT void *igraph_calloc(size_t count, size_t size);
+IGRAPH_EXPORT void *igraph_malloc(size_t size);
+IGRAPH_EXPORT void *igraph_realloc(void* ptr, size_t size);
+IGRAPH_EXPORT void igraph_free(void *ptr);
 
-IGRAPH_EXPORT void igraph_free(void *p);
-IGRAPH_EXPORT void *igraph_malloc(size_t n);
-
-__END_DECLS
+IGRAPH_END_C_DECLS
 
 #endif

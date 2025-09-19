@@ -1,19 +1,41 @@
 include(CheckCCompilerFlag)
 
+# Enable POSIX features. This needs to be set here instead of in source files so
+# that it affects CMake-based feature tests.
+#
+# See:
+#  - https://pubs.opengroup.org/onlinepubs/007904875/functions/xsh_chap02_02.html
+#  - https://www.gnu.org/software/libc/manual/html_node/Feature-Test-Macros.html
+add_compile_definitions(_POSIX_C_SOURCE=200809L)
+
 if(MSVC)
   add_compile_options(/FS)
   add_compile_definitions(_CRT_SECURE_NO_WARNINGS) # necessary to compile for UWP
 endif()
 
-if (NOT MSVC)
-  check_c_compiler_flag("-Wno-varargs" COMPILER_SUPPORTS_NO_VARARGS_FLAG)
-  check_c_compiler_flag("-Wno-unknown-warning-option" COMPILER_SUPPORTS_NO_UNKNOWN_WARNING_OPTION_FLAG)
+if(NOT MSVC)
+  # Even though we will later use 'no-unknown-warning-option', we perform the test for
+  # 'unknown-warning-option', without the 'no-' prefix. This is necessary because GCC
+  # will accept any warning option starting with 'no-', and will not error, yet it still
+  # prints a message about the unrecognized option.
+  check_c_compiler_flag("-Wunknown-warning-option" COMPILER_SUPPORTS_UNKNOWN_WARNING_OPTION_FLAG)
 endif()
 
 set(
   IGRAPH_WARNINGS_AS_ERRORS ON CACHE BOOL
   "Treat warnings as errors with GCC-like compilers"
 )
+
+option(FORCE_COLORED_OUTPUT "Always produce ANSI-colored output (GNU/Clang only)." FALSE)
+if(FORCE_COLORED_OUTPUT)
+  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+   add_compile_options(-fdiagnostics-color=always)
+  elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+   add_compile_options(-fcolor-diagnostics)
+  elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
+   add_compile_options(-fcolor-diagnostics)
+  endif()
+endif()
 
 macro(use_all_warnings TARGET_NAME)
   if(MSVC)
@@ -26,23 +48,34 @@ macro(use_all_warnings TARGET_NAME)
       /wd4800 # forcing value to 'true' or 'false' (performance warning)
       /wd4204 # nonstandard extension used: non-constant aggregate initializer
       /wd4701 # potentially uninitialized local variable
+      /wd4221 # nonstandard extension used: '...': cannot be initialized using address of automatic variable '...'
+      /wd4127 # conditional expression is constant
+      /wd4702 # unreachable code
     )
   else()
+    # Notes:
+    # GCC does not complain when encountering an unsupported "no"-prefixed warning option such as -Wno-foo.
+    # Clang does complain, but these complaints can be silenced with -Wno-unknown-warning-option.
+    # Therefore it is generally safe to use -Wno-... options that are only supported by recent GCC/Clang.
     target_compile_options(${TARGET_NAME} PRIVATE
       # GCC-style compilers:
-      $<$<C_COMPILER_ID:GCC,Clang,AppleClang,Intel>:
+      $<$<C_COMPILER_ID:GCC,Clang,AppleClang,Intel,IntelLLVM>:
         $<$<BOOL:${IGRAPH_WARNINGS_AS_ERRORS}>:-Werror>
         -Wall -Wextra -pedantic
-        -Wno-unused-function -Wno-unused-parameter -Wno-sign-compare
+        -Wstrict-prototypes
+        -Wno-unused-function -Wno-unused-parameter -Wno-unused-but-set-variable -Wno-sign-compare -Wno-constant-logical-operand
       >
-      $<$<BOOL:${COMPILER_SUPPORTS_NO_VARARGS_FLAG}>:-Wno-varargs>
-      $<$<BOOL:${COMPILER_SUPPORTS_NO_UNKNOWN_WARNING_OPTION_FLAG}>:-Wno-unknown-warning-option>
+      $<$<BOOL:${COMPILER_SUPPORTS_UNKNOWN_WARNING_OPTION_FLAG}>:-Wno-unknown-warning-option>
       # Intel compiler:
       $<$<C_COMPILER_ID:Intel>:
         # disable #279: controlling expression is constant; affecting assert(condition && "message")
-        # disable #188: enumerated type mixed with another type; affecting IGRAPH_CHECK
         # disable #592: variable "var" is used before its value is set; affecting IGRAPH_UNUSED
-        -wd279 -wd188 -wd592 -diag-disable=remark
+        # disable #10148: warning option not supported, as a replacement for -Wno-unknown-warning-option
+        -wd279 -wd592 -diag-disable=remark -diag-disable=10148
+      >
+      # Intel LLVM:
+      $<$<C_COMPILER_ID:IntelLLVM>:
+        -fp-model=precise # The default 'fast' mode is not compatible with igraph's extensive use of NaN/Inf
       >
     )
   endif()

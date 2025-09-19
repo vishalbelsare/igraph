@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard st, Cambridge MA, 02139 USA
 
@@ -23,9 +22,9 @@
 
 #include <igraph.h>
 
-#include "test_utilities.inc"
+#include "test_utilities.h"
 
-int main() {
+int main(void) {
     igraph_t graph;
     igraph_matrix_t coords;
     int i;
@@ -33,8 +32,7 @@ int main() {
     igraph_matrix_init(&coords, 0, 0);
 
     for (i = 0; i < 10; i++) {
-        igraph_erdos_renyi_game(&graph, IGRAPH_ERDOS_RENYI_GNP, /*n=*/ 100,
-                                /*p=*/ 2.0 / 100, IGRAPH_UNDIRECTED, /*loops=*/ 0);
+        igraph_erdos_renyi_game_gnp(&graph, 100, 2.0 / 100, IGRAPH_UNDIRECTED, IGRAPH_SIMPLE_SW, IGRAPH_EDGE_UNLABELED);
         igraph_layout_mds(&graph, &coords, /*dist=*/ 0, /*dim=*/ 2);
         igraph_destroy(&graph);
     }

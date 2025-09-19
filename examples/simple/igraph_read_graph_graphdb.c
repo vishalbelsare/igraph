@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2007-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard st, Cambridge MA, 02139 USA
 
@@ -23,10 +22,12 @@
 
 #include <igraph.h>
 
-int main() {
-
+int main(void) {
     igraph_t g;
     FILE *input;
+
+    /* Initialize the library. */
+    igraph_setup();
 
     input = fopen("iso_b03_m1000.A00", "rb");
     if (!input) {

@@ -19,16 +19,16 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "error.h"
-#include "platform.h"
+#include "plfit_error.h"
 
-static char *plfit_i_error_strings[] = {
+static const char *plfit_i_error_strings[] = {
     "No error",
     "Failed",
     "Invalid value",
     "Underflow",
     "Overflow",
-    "Not enough memory"
+    "Not enough memory",
+    "Maximum number of iterations exceeded"
 };
 
 #ifndef USING_R

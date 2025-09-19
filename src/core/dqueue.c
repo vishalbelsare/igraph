@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2007-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard street, Cambridge, MA 02139 USA
 
@@ -30,11 +29,11 @@
 #include "igraph_pmt_off.h"
 #undef BASE_IGRAPH_REAL
 
-#define BASE_LONG
+#define BASE_INT
 #include "igraph_pmt.h"
 #include "dqueue.pmt"
 #include "igraph_pmt_off.h"
-#undef BASE_LONG
+#undef BASE_INT
 
 #define BASE_CHAR
 #include "igraph_pmt.h"
@@ -47,9 +46,3 @@
 #include "dqueue.pmt"
 #include "igraph_pmt_off.h"
 #undef BASE_BOOL
-
-#define BASE_INT
-#include "igraph_pmt.h"
-#include "dqueue.pmt"
-#include "igraph_pmt_off.h"
-#undef BASE_INT

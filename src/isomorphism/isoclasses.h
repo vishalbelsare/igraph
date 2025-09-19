@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2008-2020  The igraph development team
    334 Harvard street, Cambridge, MA 02139 USA
 
@@ -26,21 +25,21 @@
 
 #include "igraph_decls.h"
 
-__BEGIN_DECLS
+IGRAPH_BEGIN_C_DECLS
 
-extern const unsigned int igraph_i_isoclass_3[];
-extern const unsigned int igraph_i_isoclass_4[];
-extern const unsigned int igraph_i_isoclass_3u[];
-extern const unsigned int igraph_i_isoclass_4u[];
 extern const unsigned int igraph_i_isoclass2_3[];
 extern const unsigned int igraph_i_isoclass2_4[];
 extern const unsigned int igraph_i_isoclass2_3u[];
 extern const unsigned int igraph_i_isoclass2_4u[];
+extern const unsigned int igraph_i_isoclass2_5u[];
+extern const unsigned int igraph_i_isoclass2_6u[];
 extern const unsigned int igraph_i_isoclass_3_idx[];
 extern const unsigned int igraph_i_isoclass_4_idx[];
 extern const unsigned int igraph_i_isoclass_3u_idx[];
 extern const unsigned int igraph_i_isoclass_4u_idx[];
+extern const unsigned int igraph_i_isoclass_5u_idx[];
+extern const unsigned int igraph_i_isoclass_6u_idx[];
 
-__END_DECLS
+IGRAPH_END_C_DECLS
 
 #endif

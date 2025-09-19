@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2007-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard street, Cambridge, MA 02139 USA
 
@@ -37,7 +36,7 @@
 #undef HEAP_TYPE_MIN
 #undef BASE_IGRAPH_REAL
 
-#define BASE_LONG
+#define BASE_INT
 #define HEAP_TYPE_MAX
 #include "igraph_pmt.h"
 #include "heap.pmt"
@@ -48,7 +47,7 @@
 #include "heap.pmt"
 #include "igraph_pmt_off.h"
 #undef HEAP_TYPE_MIN
-#undef BASE_LONG
+#undef BASE_INT
 
 #define BASE_CHAR
 #define HEAP_TYPE_MAX

@@ -1,6 +1,6 @@
 /*
-   IGraph library.
-   Copyright (C) 2021  The igraph development team <igraph@igraph.org>
+   igraph library.
+   Copyright (C) 2021-2024  The igraph development team <igraph@igraph.org>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -17,20 +17,45 @@
 */
 
 #include <igraph.h>
-#include "test_utilities.inc"
+#include "test_utilities.h"
 
-int main() {
-    int *a = IGRAPH_CALLOC(0, int);
+int main(void) {
+    int *a;
+    char *b;
 
+    /* Macros */
+
+    a = IGRAPH_CALLOC(0, int);
     IGRAPH_ASSERT(a);
 
     a = IGRAPH_REALLOC(a, 0, int);
-
     IGRAPH_ASSERT(a);
 
     IGRAPH_FREE(a);
+    IGRAPH_ASSERT(!a); /* IGRAPH_FREE(a) sets 'a' to NULL */
 
-    IGRAPH_ASSERT(!a);
+    /* We use type 'char' to work around warnings from some moderns compilers such as Clang 22:
+     * error: allocation of insufficient size '1' for type 'int' with size '4' [-Werror,-Walloc-size] */
+    b = IGRAPH_MALLOC(0);
+    IGRAPH_ASSERT(b);
+
+    IGRAPH_FREE(b);
+    IGRAPH_ASSERT(!b);
+
+    /* Functions */
+
+    a = igraph_calloc(0, sizeof(*a));
+    IGRAPH_ASSERT(a);
+
+    a = igraph_realloc(a, 0);
+    IGRAPH_ASSERT(a);
+
+    igraph_free(a);
+
+    a = igraph_malloc(0);
+    IGRAPH_ASSERT(a);
+
+    igraph_free(a);
 
     VERIFY_FINALLY_STACK();
     return 0;

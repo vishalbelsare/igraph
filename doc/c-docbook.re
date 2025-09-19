@@ -5,7 +5,33 @@ REPLACE ----- remove the " *" lines -------------------------------------------
 ^[ ]\*\s*\n
 WITH --------------------------------------------------------------------------
 \n
-REPLACE ----- for the template functions --------------------------------------
+REPLACE IN typed_list.pmt ----- for the typed list template functions ---------
+
+FUNCTION\(
+(?P<suffix>[^\)]*)
+\)\s*
+
+WITH
+
+igraph_vector_list_\g<suffix>
+
+REPLACE IN typed_list.pmt ----- typed list template item type -----------------
+
+ITEM_TYPE
+
+WITH
+
+igraph_vector_t
+
+REPLACE IN typed_list.pmt ----- typed list template type ----------------------
+
+TYPE
+
+WITH
+
+igraph_vector_list_t
+
+REPLACE IN *.pmt ----- for the template functions -----------------------------
 
 FUNCTION\(
 (?P<base>[^, \)]*)\s*,\s*
@@ -16,7 +42,7 @@ WITH
 
 \g<base>_\g<suffix>
 
-REPLACE ----- template type ---------------------------------------------------
+REPLACE IN *.pmt ----- template type ------------------------------------------
 
 TYPE\(
 (?P<type>[^\)]*)
@@ -26,7 +52,7 @@ WITH
 
 \g<type>_t
 
-REPLACE ----- template base type, we cowardly assume real number --------------
+REPLACE IN *.pmt ----- template base type, we cowardly assume real number -----
 
 BASE
 
@@ -42,7 +68,7 @@ REPLACE ----- function object, extract its signature --------------------------
 [\s]*(?P<brief>[^\n]*?)\n        # brief description
 (?P<after>.*?)\*\/               # tail of the comment
 \s*
-(IGRAPH_EXPORT )?                # strip IGRAPH_EXPORT from prototype
+(IGRAPH_EXPORT\s+)?              # strip IGRAPH_EXPORT from prototype
 (?P<def>.*?\))                   # function head
 (?=(\s*;)|(\s*\{))               # prototype ends with ; function head with {
 .*\Z                             # and the remainder
@@ -152,7 +178,9 @@ REPLACE ----- variables -------------------------------------------------------
 (?P<name>(?P<pre>(igraph_)|(IGRAPH_)|())(?P<tail>\w+))
 [\s]*(?P<brief>[^\n]*?)\n         # brief description
 (?P<after>.*?)\*\/                # tail of the comment
-\s*(?P<def>[^;]*;)                # the definition of the variable
+\s*
+(IGRAPH_EXPORT\s+)?               # strip IGRAPH_EXPORT
+(?P<def>[^;]*;)                   # the definition of the variable
 .*\Z                              # and the remainder
 
 WITH --------------------------------------------------------------------------
@@ -177,7 +205,7 @@ REPLACE ----- \define ---------------------------------------------------------
 (?P<after>.*?)\*\/                # tail of the comment
 \s*                               # whitespace
 (?P<def>\#define\s+[\w0-9,]+\s*   # macro name
-(\([\w0-9, ]+\))?)                # macro args (optional)
+(\([\w0-9,. ]+\))?)               # macro args (optional)
 .*\Z                              # drop the remainder
 
 WITH --------------------------------------------------------------------------
@@ -325,7 +353,7 @@ WITH --------------------------------------------------------------------------
 </para>
 </section>
 
-REPLACE ----- structure member descriptions, one block ------------------------
+REPLACE IN *.h ----- structure member descriptions, one block -----------------
 
 ^[\s]*\n
 (?P<before2>.*?)                # empty line+text
@@ -344,9 +372,9 @@ WITH --------------------------------------------------------------------------
 \g<members>
 </variablelist></para></formalpara><para>
 
-REPLACE ----- structure member descriptions -----------------------------------
+REPLACE IN *.h ----- structure member descriptions ----------------------------
 
-\\member\b\s*                    # \enumval command
+\\member\b\s*                     # \enumval command
 (?P<paramname>(\w+)|(...))\s+     # name of the parameter
 (?P<paramtext>.*?)                # text of the \enumval command
 (?=(\\member)|(</variablelist>)|
@@ -360,14 +388,14 @@ WITH --------------------------------------------------------------------------
 
 REPLACE ----- \typedef function -----------------------------------------------
 
-(?P<before>\A.*?)                   # comment head
+(?P<before>\A.*?)                 # comment head
 \\typedef\s+                      # \typedef command
 (?P<name>(?P<pre>(igraph_)|(IGRAPH_)|())(?P<tail>\w+))
 [\s]*(?P<brief>[^\n]*?)\n         # brief description
 (?P<after>.*?)                    # comment tail
 \*\/                              # end of comment block
 \s*
-(?P<src>typedef\s+[^;]*;)        # the typedef definition
+(?P<src>typedef\s+[^;]*;)         # the typedef definition
 .*\Z
 
 WITH --------------------------------------------------------------------------
@@ -408,6 +436,15 @@ REPLACE ----- \varname command ------------------------------------------------
 WITH
 
 <varname>\g<var></varname>
+
+REPLACE ----- references, \ref command, special case for igraph_vector_int ----
+
+\\ref\b\s*
+igraph_vector_int_(?P<what>\w+)(?P<paren>([\(][\)])?)
+
+WITH --------------------------------------------------------------------------
+
+<link linkend="igraph_vector_\g<what>"><function>igraph_vector_int_\g<what>\g<paren></function></link>
 
 REPLACE ----- references, \ref command ----------------------------------------
 
@@ -617,7 +654,7 @@ WITH --------------------------------------------------------------------------
 
 REPLACE ----- add http:// and https:// links ----------------------------------
 
-(?P<link>https?:\/\/[-\+=&;%@./~()'\w_]*[-\+=&;%@/~'\w_])
+(?P<link>https?:\/\/[-\+=&;%@.:/~()?'\w_]*[-\+=&;%@/~'\w_])
 
 WITH --------------------------------------------------------------------------
 

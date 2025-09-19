@@ -1,6 +1,5 @@
-/* -*- mode: C -*-  */
 /*
-   IGraph library.
+   igraph library.
    Copyright (C) 2010-2012  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard street, Cambridge, MA 02139 USA
 
@@ -24,43 +23,21 @@
 #include <igraph.h>
 #include <stdio.h>
 
-#include "test_utilities.inc"
+#include "test_utilities.h"
 
-int test_from_prufer_back_to_prufer() {
+igraph_bool_t test_from_prufer_back_to_prufer(void) {
     igraph_t graph;
-    igraph_integer_t prufer[] = {2, 3, 2, 3};
+    igraph_int_t prufer[] = {2, 3, 2, 3};
 
     igraph_vector_int_t expected_prufer, output_prufer;
 
     igraph_bool_t success = 0;
 
-    igraph_vector_int_view(&expected_prufer, prufer, 4);
-    IGRAPH_CHECK(igraph_from_prufer(&graph, &expected_prufer));
+    expected_prufer = igraph_vector_int_view(prufer, 4);
+    igraph_from_prufer(&graph, &expected_prufer);
 
-    IGRAPH_CHECK(igraph_vector_int_init(&output_prufer, 4));
-    IGRAPH_CHECK(igraph_to_prufer(&graph, &output_prufer));
-
-    success = igraph_vector_int_all_e(&expected_prufer, &output_prufer);
-
-    igraph_destroy(&graph);
-    igraph_vector_int_destroy(&output_prufer);
-
-    return success;
-}
-
-int test_from_prufer_back_to_prufer_with_resize() {
-    igraph_t graph;
-    igraph_integer_t prufer[] = {0, 2, 4, 1, 1, 0};
-
-    igraph_vector_int_t expected_prufer, output_prufer;
-
-    igraph_bool_t success;
-
-    igraph_vector_int_view(&expected_prufer, prufer, 6);
-    IGRAPH_CHECK(igraph_from_prufer(&graph, &expected_prufer));
-
-    IGRAPH_CHECK(igraph_vector_int_init(&output_prufer, 0));
-    IGRAPH_CHECK(igraph_to_prufer(&graph, &output_prufer));
+    igraph_vector_int_init(&output_prufer, 4);
+    igraph_to_prufer(&graph, &output_prufer);
 
     success = igraph_vector_int_all_e(&expected_prufer, &output_prufer);
 
@@ -70,19 +47,41 @@ int test_from_prufer_back_to_prufer_with_resize() {
     return success;
 }
 
-int test_from_prufer_back_to_prufer_with_resize2() {
+igraph_bool_t test_from_prufer_back_to_prufer_with_resize(void) {
     igraph_t graph;
-    igraph_integer_t prufer[] = {2, 4, 5, 1, 3};
+    igraph_int_t prufer[] = {0, 2, 4, 1, 1, 0};
 
     igraph_vector_int_t expected_prufer, output_prufer;
 
     igraph_bool_t success;
 
-    igraph_vector_int_view(&expected_prufer, prufer, 5);
-    IGRAPH_CHECK(igraph_from_prufer(&graph, &expected_prufer));
+    expected_prufer = igraph_vector_int_view(prufer, 6);
+    igraph_from_prufer(&graph, &expected_prufer);
 
-    IGRAPH_CHECK(igraph_vector_int_init(&output_prufer, 0));
-    IGRAPH_CHECK(igraph_to_prufer(&graph, &output_prufer));
+    igraph_vector_int_init(&output_prufer, 0);
+    igraph_to_prufer(&graph, &output_prufer);
+
+    success = igraph_vector_int_all_e(&expected_prufer, &output_prufer);
+
+    igraph_destroy(&graph);
+    igraph_vector_int_destroy(&output_prufer);
+
+    return success;
+}
+
+igraph_bool_t test_from_prufer_back_to_prufer_with_resize2(void) {
+    igraph_t graph;
+    igraph_int_t prufer[] = {2, 4, 5, 1, 3};
+
+    igraph_vector_int_t expected_prufer, output_prufer;
+
+    igraph_bool_t success;
+
+    expected_prufer = igraph_vector_int_view(prufer, 5);
+    igraph_from_prufer(&graph, &expected_prufer);
+
+    igraph_vector_int_init(&output_prufer, 0);
+    igraph_to_prufer(&graph, &output_prufer);
 
 
     success = igraph_vector_int_all_e(&output_prufer, &expected_prufer);
@@ -93,12 +92,12 @@ int test_from_prufer_back_to_prufer_with_resize2() {
     return success;
 }
 
-int random_tree(int size, igraph_t* tree, igraph_vector_int_t* prufer) {
-    int i, j;
-    int prufer_length;
+igraph_error_t random_tree(igraph_int_t size, igraph_t* tree, igraph_vector_int_t* prufer) {
+    igraph_int_t i, j;
+    igraph_int_t prufer_length;
 
     if (size < 0) {
-        return IGRAPH_EINVAL;
+        IGRAPH_ERROR("Invalid size.", IGRAPH_EINVAL);
     }
 
     if (size < 2) {
@@ -118,21 +117,21 @@ int random_tree(int size, igraph_t* tree, igraph_vector_int_t* prufer) {
     return IGRAPH_SUCCESS;
 }
 
-int test_from_random_prufer_back_to_prufer(int tree_size) {
+igraph_bool_t test_from_random_prufer_back_to_prufer(int tree_size) {
     igraph_t graph;
     igraph_vector_int_t expected_prufer, output_prufer;
 
     igraph_bool_t success = 0;
-    igraph_integer_t random_seed = 4096;
+    igraph_int_t random_seed = 4096;
 
-    IGRAPH_CHECK(igraph_vector_int_init(&output_prufer, 0));
-    IGRAPH_CHECK(igraph_vector_int_init(&expected_prufer, 0));
+    igraph_vector_int_init(&output_prufer, 0);
+    igraph_vector_int_init(&expected_prufer, 0);
 
     igraph_rng_seed(igraph_rng_default(), random_seed);
 
-    IGRAPH_CHECK(random_tree(tree_size, &graph, &expected_prufer));
+    random_tree(tree_size, &graph, &expected_prufer);
 
-    IGRAPH_CHECK(igraph_to_prufer(&graph, &output_prufer));
+    igraph_to_prufer(&graph, &output_prufer);
 
     success = igraph_vector_int_all_e(&output_prufer, &expected_prufer);
 
@@ -143,16 +142,16 @@ int test_from_random_prufer_back_to_prufer(int tree_size) {
     return success;
 }
 
-#undef RUN_TEST   /* from test_utilities.inc */
+#undef RUN_TEST   /* from test_utilities.h */
 
 int test_num = 0;
 #define RUN_TEST(TEST) \
     test_num++; \
-    if(!(TEST)) { \
+    if (!(TEST)) { \
         return test_num; \
     }
 
-int main() {
+int main(void) {
     RUN_TEST(test_from_prufer_back_to_prufer());
     RUN_TEST(test_from_prufer_back_to_prufer_with_resize());
     RUN_TEST(test_from_prufer_back_to_prufer_with_resize2());

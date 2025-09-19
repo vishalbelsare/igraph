@@ -16,6 +16,8 @@ experienced with C, you can contribute in a number of ways:
      the issue stating that this is still a problem in version X.
    - Some [issues point out problems with the documentation](https://github.com/igraph/igraph/labels/documentation);
      perhaps you could help correct these?
+   - Some [issues require clarifying a mathematical problem, or some literature research](https://github.com/igraph/igraph/labels/theory),
+     before any programming can begin. Can you contribute through your theoretical expertise?
    - Looking to contribute code? Take a look at some [good first issues](https://github.com/igraph/igraph/labels/good%20first%20issue).
 
 ## Using the issue tracker
@@ -94,12 +96,15 @@ to convince the project's developers of the merits of this feature.
 <a name="pull-requests"></a>
 ## Pull requests
 
-Good pull requests - patches, improvements, new features - are a fantastic help.
+_**Note:** The wiki has a lot of useful information for newcomers, as well as a
+[quick start guide](https://github.com/igraph/igraph/wiki/Quickstart-for-new-contributors)!_
+
+Good pull requests—patches, improvements, new features—are a fantastic help.
 They should remain focused in scope and avoid containing unrelated commits.
 Please also take a look at our [tips on writing igraph code](#tips) before
 getting your hands dirty.
 
-**Please ask first** before embarking on any significant pull request (e.g.
+**Please ask first before embarking on any significant pull request** (e.g.
 implementing features, refactoring code, porting to a different language),
 otherwise you risk spending a lot of time working on something that the
 project's developers might not want to merge into the project.
@@ -155,12 +160,12 @@ Follow the following steps if you would like to make a new pull request:
    ```bash
    git pull [--rebase] upstream <dev-branch>
    ```
-   
+
    Rebasing is preferable over merging as you do not need to deal with merge
    conflicts; however, if you already have many commits, merging the upstream
    development branch may be faster.
 
-7. WHen your topic branch is up-to-date with the upstream development branch, you can
+7. When your topic branch is up-to-date with the upstream development branch, you can
    push your topic branch up to your fork:
 
    ```bash
@@ -176,6 +181,10 @@ see also [Legal Stuff](#legal).
 
 <a name="branching"></a>
 ### Branching
+
+In short, always ask whether your contribution should target the `master` or
+`develop` branch _before_ starting any work. Read on for more details on how
+this is decided.
 
 `igraph` is committed to [semantic versioning](https://semver.org/). We are
 currently still in the development release (0.x), which in principle is a mark
@@ -207,10 +216,6 @@ always good to decide **before** starting to work on something whether you
 should start from the `master` branch or from the `develop` branch. In most
 cases, changes in the `master` branch will also be merged to the `develop`
 branch by the maintainers.
-
-If you are unsure about the branch to target, open an issue about your proposed
-feature and we can discuss the appropriate target branch in the issue before
-you send a PR.
 
 <a name="tips"></a>
 ## Writing igraph Code
